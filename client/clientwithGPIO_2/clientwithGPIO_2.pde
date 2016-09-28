@@ -12,6 +12,8 @@ boolean allDataArrived;
 int startTime;
 int timeout;
 int ellapsedTime;
+int step;
+int pos;
 
 
 void  setup() {
@@ -22,7 +24,9 @@ void  setup() {
   port = 10002;
   w = width;
   h = height;
-  numberOfPackets = w * h;
+  numberOfPackets = 60;
+  step = w*h/numberOfPackets;
+
   inPackets = new boolean[numberOfPackets];
   allDataArrived = false;
 
@@ -40,12 +44,20 @@ void  setup() {
 
 void draw() {
   timer();
-  if (allDataArrived = true) {
+  if (allDataArrived == true) {
     for (int i=0; i < numberOfPackets; i++) {
-
+      pos = i*step;      
       if (inPackets[i] == true) {
-        color c = color(255);
-        pixels[i] = c;
+        for (int n = 0; n < step; n++) {          
+          color red = color(237, 28, 36);
+          pixels[n + pos] = red;
+        }
+      }
+      else {
+        for (int n = 0; n < step; n++) {          
+          color blue = color(46, 49, 146);
+          pixels[n + pos] = blue;
+        }
       }
     }
     updatePixels();

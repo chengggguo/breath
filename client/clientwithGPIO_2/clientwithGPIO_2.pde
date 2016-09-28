@@ -1,3 +1,5 @@
+import processing.io.*;
+
 import hypermedia.net.*;
 
 UDP udp;
@@ -24,7 +26,7 @@ void  setup() {
   port = 10002;
   w = width;
   h = height;
-  numberOfPackets = 60;
+  numberOfPackets = 6000;
   step = w*h/numberOfPackets;
 
   inPackets = new boolean[numberOfPackets];
@@ -49,13 +51,13 @@ void draw() {
       pos = i*step;      
       if (inPackets[i] == true) {
         for (int n = 0; n < step; n++) {          
-          color red = color(237, 28, 36);
+          color red = color(46, 49, 146);
           pixels[n + pos] = red;
         }
       }
       else {
         for (int n = 0; n < step; n++) {          
-          color blue = color(46, 49, 146);
+          color blue = color(237, 28, 36);
           pixels[n + pos] = blue;
         }
       }

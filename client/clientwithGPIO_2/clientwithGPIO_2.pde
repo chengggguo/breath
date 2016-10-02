@@ -1,5 +1,4 @@
 import processing.io.*;
-
 import hypermedia.net.*;
 
 UDP udp;
@@ -17,6 +16,8 @@ int ellapsedTime;
 int step;
 int pos;
 
+boolean valOn = false;
+
 
 void  setup() {
   size(800, 600);
@@ -26,7 +27,7 @@ void  setup() {
   port = 10002;
   w = width;
   h = height;
-  numberOfPackets = 6000;
+  numberOfPackets = 1000;
   step = w*h/numberOfPackets;
 
   inPackets = new boolean[numberOfPackets];
@@ -34,6 +35,8 @@ void  setup() {
 
   udp = new UDP( this, 10001);
   udp.listen(true);
+  GPIO.pinMode(12, GPIO.OUTPUT);
+  //frameRate(10);
 
   for (int i = 0; i < numberOfPackets; i++) {
     inPackets[i] = false;
@@ -46,6 +49,7 @@ void  setup() {
 
 void draw() {
   timer();
+  valOn = !valOn;
   if (allDataArrived == true) {
     for (int i=0; i < numberOfPackets; i++) {
       pos = i*step;      
@@ -54,8 +58,7 @@ void draw() {
           color red = color(46, 49, 146);
           pixels[n + pos] = red;
         }
-      }
-      else {
+      } else {
         for (int n = 0; n < step; n++) {          
           color blue = color(237, 28, 36);
           pixels[n + pos] = blue;
@@ -63,6 +66,7 @@ void draw() {
       }
     }
     updatePixels();
+    //valSwitch();
   }
 }
 
@@ -73,6 +77,10 @@ void keyPressed() {
       message = message + ":\n";
       udp.send(message, ip, port);
     }
+  }
+
+  if (key == '1') {
+    valSwitch();
   }
 }
 
@@ -88,4 +96,18 @@ void receive(byte[] data, String ip, int port) {
   String message = new String(data);
   int index = int(message);
   inPackets[index] = true;
+}
+
+void valSwitch() {
+  println(inPackets.length);
+  for (int i = 400; i < numberOfPackets; i++) {
+    if (inPackets[i] == true) {
+      GPIO.digitalWrite(12, GPIO.HIGH);
+      delay(100);
+    } else {
+      GPIO.digitalWrite(12, GPIO.LOW);
+      delay(100);
+    }
+  }
+  println("done");
 }

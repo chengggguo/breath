@@ -1,6 +1,6 @@
 import processing.io.*;
 import hypermedia.net.*;
-
+//// udp setting
 UDP udp;
 String ip;
 int port;
@@ -9,14 +9,15 @@ boolean [] inPackets;
 int w;
 int h;
 boolean allDataArrived;
-
 int startTime;
 int timeout;
 int ellapsedTime;
 int step;
 int pos;
-
 boolean valOn = false;
+
+////adc setting(class)
+MCP3008 adc;
 
 
 void  setup() {
@@ -37,6 +38,9 @@ void  setup() {
   udp.listen(true);
   GPIO.pinMode(12, GPIO.OUTPUT);
   //frameRate(10);
+
+  //printArray(SPI.list());
+  adc = new MCP3008(SPI.list()[0]);
 
   for (int i = 0; i < numberOfPackets; i++) {
     inPackets[i] = false;

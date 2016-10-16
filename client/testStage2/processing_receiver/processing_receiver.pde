@@ -8,10 +8,17 @@ ValueReceiver receiver;
 public int analogValue;
 
 // fliter
-float alpha = 0.5;
+float alpha = 0.5; // weighe of fliter(smoothing)
 float smoothed = 0;
 float rawValue;
 float mappedValue;
+
+//timer
+int time;
+
+//array for average wind speed
+float[] speed = new float[100];
+
 
 void setup() 
 {
@@ -24,17 +31,23 @@ void setup()
 
 void draw() 
 {
-  mappedValue = map(analogValue, 95, 1000, 0, 255);
-  //  Draw the background using the variable that was synced from the Arduino to this sketch
-  background(mappedValue);
-
   Smooth(mappedValue);
-  println("smoothed "+ smoothed);
-  println("raw " + mappedValue);
-  println("######");
-  delay(500);
+  int i = 0;
+  time = millis();
+  while (smoothed >= 8.5) {
+    if ((millis()-time)>1000) {
+      speed[i] = smoothed;
+      i = i+1;
+    }
+  }
+  print(speed);
+  //println("smoothed "+ smoothed);
+  //println("raw " + mappedValue);
+  //println("######");
+  //delay(500);
 }
 
 void Smooth(float rawValue) {
   smoothed = alpha * rawValue + (1-alpha)*smoothed;
+  mappedValue = map(analogValue, 70, 1000, 0, 255);
 }

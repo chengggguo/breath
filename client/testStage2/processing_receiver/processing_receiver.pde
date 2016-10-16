@@ -29,6 +29,7 @@ void setup()
 
   receiver = new ValueReceiver(this, serial);
   receiver.observe("analogValue");
+  delay(500);
 }
 
 void draw() {
@@ -48,11 +49,15 @@ void draw() {
   while (counting) {
     Smooth(analogValue);
     if (mappedValue>8.5) {
-      if ((millis()-time)> 2000) {
+      if ((millis()-time)> 200) {
+        println(smoothed);
         speed[i] = smoothed;
         time = millis();
-        println(i +": " + speed[i]);
+        //println(i +": " + speed[i]);
         if (i<9) {
+          println("done" + i);
+          
+          
           i = i+1;
         } else {
           counting = false;

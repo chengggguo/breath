@@ -1,7 +1,7 @@
 import processing.io.*;
 import hypermedia.net.*;
 import processing.serial.*;
-import cc.arduino.*;
+
 
 //// udp setting
 UDP udp;
@@ -41,9 +41,6 @@ void  setup() {
   udp.listen(true);
   GPIO.pinMode(12, GPIO.OUTPUT);
   //frameRate(10);
-
-  //printArray(SPI.list());
-  adc = new MCP3008(SPI.list()[0]);
 
   for (int i = 0; i < numberOfPackets; i++) {
     inPackets[i] = false;

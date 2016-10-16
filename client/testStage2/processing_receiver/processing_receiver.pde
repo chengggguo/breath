@@ -17,7 +17,9 @@ float mappedValue;
 int time;
 
 //array for average wind speed
-float[] speed = new float[100];
+float[] speed = new float[10];
+boolean counting = true;
+boolean wormup = true;
 
 
 void setup() 
@@ -29,18 +31,43 @@ void setup()
   receiver.observe("analogValue");
 }
 
-void draw() 
-{
-  Smooth(mappedValue);
+void draw() {
+  while (wormup) {
+    for (int i = 0; i <5; i++) {
+      Smooth(analogValue);
+      println(mappedValue);
+      delay(500);
+    }
+    wormup = false;
+    println("wormup done");
+  }
+
   int i = 0;
+
   time = millis();
-  while (smoothed >= 8.5) {
-    if ((millis()-time)>1000) {
-      speed[i] = smoothed;
-      i = i+1;
+  while (counting) {
+    Smooth(analogValue);
+    if (mappedValue>8.5) {
+      if ((millis()-time)> 2000) {
+        speed[i] = smoothed;
+        time = millis();
+        println(i +": " + speed[i]);
+        if (i<9) {
+          i = i+1;
+        } else {
+          counting = false;
+        }
+      }
+    } else {
+      counting = false;
     }
   }
-  print(speed);
+  //Smooth(analogValue);
+  //println(mappedValue);
+  println("done");
+  delay(1000);
+
+  //print(speed);
   //println("smoothed "+ smoothed);
   //println("raw " + mappedValue);
   //println("######");
@@ -49,5 +76,5 @@ void draw()
 
 void Smooth(float rawValue) {
   smoothed = alpha * rawValue + (1-alpha)*smoothed;
-  mappedValue = map(analogValue, 70, 1000, 0, 255);
+  mappedValue = map(smoothed, 70, 1000, 0, 255);
 }

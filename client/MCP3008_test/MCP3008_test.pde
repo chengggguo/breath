@@ -9,7 +9,7 @@ int t = 100;
 
 
 // fliter
-float alpha = 0.1;
+float alpha = 0.02;
 float smoothed = 0;
 float rawValue;
 float mappedValue;

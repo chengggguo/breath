@@ -8,10 +8,11 @@ ValueReceiver receiver;
 public int analogValue;
 
 // fliter
-float alpha = 0.5; // weighe of fliter(smoothing)
+float alpha = 0.6;// weighe of fliter(smoothing)
 float smoothed = 0;
 float rawValue;
 float mappedValue;
+float bValue;
 
 //timer
 int time;
@@ -21,6 +22,8 @@ float[] speed = new float[10];
 boolean counting = true;
 boolean wormup = true;
 
+int i = 0;
+  int num;
 
 void setup() 
 {
@@ -29,57 +32,110 @@ void setup()
 
   receiver = new ValueReceiver(this, serial);
   receiver.observe("analogValue");
-  delay(500);
+  size(400, 400);
 }
 
 void draw() {
-  while (wormup) {
-    for (int i = 0; i <5; i++) {
-      Smooth(analogValue);
-      println(mappedValue);
-      delay(500);
-    }
-    wormup = false;
-    println("wormup done");
+  background(analogValue/4);
+  if(analogValue>100){
+    num = 0;
+  }else{
+    num = 1;
   }
 
-  int i = 0;
-
-  time = millis();
-  while (counting) {
-    Smooth(analogValue);
-    if (mappedValue>8.5) {
-      if ((millis()-time)> 200) {
+  switch(num) {
+    case 0:
+    if ((millis()-time)> 1000) {
+      println("analogValue");
+      println(analogValue);
+      delay(10);
+      if (analogValue>100) {
         println(smoothed);
-        speed[i] = smoothed;
+        speed[i] = analogValue;
         time = millis();
         //println(i +": " + speed[i]);
         if (i<9) {
           println("done" + i);
-          
-          
           i = i+1;
         } else {
           counting = false;
         }
+      } else {
+        counting = false;
       }
-    } else {
-      counting = false;
     }
   }
   //Smooth(analogValue);
+  //println("mappedValue");
   //println(mappedValue);
-  println("done");
-  delay(1000);
-
-  //print(speed);
-  //println("smoothed "+ smoothed);
-  //println("raw " + mappedValue);
-  //println("######");
-  //delay(500);
+  //delay(10);
 }
+
+
+
+
+//while (counting) {
+//  while (wormup) {
+//    for (int n = 0; n <10; n++) {
+//      Smooth(analogValue);
+//      println(mappedValue);
+//      delay(500);
+//    }
+//    wormup = false;
+//    println("wormup done");
+//  }
+//  println("raw" + analogValue);
+//  println("mapped" + mappedValue);
+//  delay(100);
+//  if ((millis()-time)> 1000) {
+//    Smooth(analogValue);
+//    println("mappedValue");
+//    println(mappedValue);
+//    delay(10);
+//    if (mappedValue>8.3) {
+//      println(smoothed);
+//      speed[i] = smoothed;
+//      time = millis();
+//      //println(i +": " + speed[i]);
+//      if (i<9) {
+//        println("done" + i);
+//        i = i+1;
+//      } else {
+//        counting = false;
+//      }
+//    } else {
+//      counting = false;
+//    }
+//  }
+//  Smooth(analogValue);
+//  println("mappedValue");
+//  println(mappedValue);
+//  delay(10);
+//}
+//Smooth(analogValue);
+//println(mappedValue);
+//println("done");
+//delay(1000);
 
 void Smooth(float rawValue) {
   smoothed = alpha * rawValue + (1-alpha)*smoothed;
   mappedValue = map(smoothed, 70, 1000, 0, 255);
+  delay(500);
 }
+
+void keyPressed() {
+  if (key == ' ') {
+    println("pressed");
+    time = millis();
+    while (counting) {
+      if (analogValue>i) {
+        println("analogValue");
+        println(analogValue);
+        delay(10);
+        i = analogValue;
+      } else if (i<100) {
+        counting = false;
+      }
+    }
+  }
+}     

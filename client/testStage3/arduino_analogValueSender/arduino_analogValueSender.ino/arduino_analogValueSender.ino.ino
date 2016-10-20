@@ -1,4 +1,6 @@
-int sensor = A0;                       // Switch connected to pin 4
+int sensor = A0;  // Switch connected to pin 4
+int mValue; // mapped value
+
 
 void setup() {
   pinMode(sensor, INPUT);             // Set pin 0 as an input
@@ -6,15 +8,11 @@ void setup() {
 }
 
 void loop() {
- while (true) {
-    Serial.write(250);
-    delay(1000);
- }
-
-  //  if (analogRead(sensor) > 100) {  // If switch is ON,
-  //    Serial.write(100);               // send 1 to Processing
-  //  } else {                               // If the switch is not ON,
-  //    Serial.write(0);               // send 0 to Processing
-  //  }
-//  delay(1000);                            // Wait 100 milliseconds
+    if (analogRead(sensor) > 100) {  
+      mValue = int(map(analogRead(sensor),100,900,10,255));
+      Serial.write(mValue);               // send data to Processing
+    } else {                              
+//      Serial.write(0);              
+    }
+  delay(1000);                            
 }

@@ -1,16 +1,8 @@
-/**
- * Simple Read
- * 
- * Read data from the serial port and change the color of a rectangle
- * when a switch connected to a Wiring or Arduino board is pressed and released.
- * This example works with the Wiring / Arduino program that follows below.
- */
-
-
 import processing.serial.*;
 
 Serial myPort;  // Create object from Serial class
 int val;      // Data received from the serial port
+int MaxS = 0;
 
 void setup() 
 {
@@ -21,7 +13,32 @@ void setup()
 void draw()
 {
   if ( myPort.available() > 0) {  // If data is available,
-    println(myPort.read());         // read it and store it in val
+    val = myPort.read();
+    //if (val == 0) {
+    //  println("get0");
+    //} else if (val == 1) {
+    //  println("get1");
+    //}
+    switch(val) {
+    case 0:
+      while (true) {
+        val = myPort.read();
+        if (val > MaxS) {
+          MaxS = val;
+        }
+        break;
+      }
+
+    case 1:
+      println("Stand by");
+      MaxS = 0;
+      break;
+    case 2:
+      println("inhaling");
+    }
+    println("dataNow "+ val);
+    println("Max " +MaxS);
+    delay(1000);
   }
   //background(255);             // Set background to white
   //if (val == 0) {              // If the serial value is 0,
@@ -32,28 +49,3 @@ void draw()
   //}
   //rect(50, 50, 100, 100);
 }
-
-
-
-/*
-
-// Wiring / Arduino Code
-// Code for sensing a switch status and writing the value to the serial port.
-
-int switchPin = 4;                       // Switch connected to pin 4
-
-void setup() {
-  pinMode(switchPin, INPUT);             // Set pin 0 as an input
-  Serial.begin(9600);                    // Start serial communication at 9600 bps
-}
-
-void loop() {
-  if (digitalRead(switchPin) == HIGH) {  // If switch is ON,
-    Serial.write(1);               // send 1 to Processing
-  } else {                               // If the switch is not ON,
-    Serial.write(0);               // send 0 to Processing
-  }
-  delay(100);                            // Wait 100 milliseconds
-}
-
-*/

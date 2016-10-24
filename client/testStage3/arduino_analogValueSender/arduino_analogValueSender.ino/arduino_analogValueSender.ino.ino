@@ -6,9 +6,9 @@ boolean check = true; // state check(blowing, inhaling, stand by)
 boolean countingBlow = false;
 unsigned long timeStart;
 unsigned long timeEnd;
-unsigned long interval;
+int interval = 0;
 int maxSpeed = 0;
-int capacity;
+int capacity = 0;
 
 
 
@@ -18,51 +18,57 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("raw " + analogRead(sensor));
   if (check = true) {
-    if (analogRead(sensor) >= 110) {
-      Serial.println("Blowing");
-      //      Serial.write(0);  // blowing
-      countingBlow = true;
-      timeStart = millis();
-      check = false;
-      delay(200);
-    } else if (analogRead(sensor)<110 and analogRead(sensor) >= 100) {
-      Serial.println("stand by");
-      //      Serial.write(1); // stand by
-      delay(100);
-    } else {
-      Serial.println("inhaling");
-      //      Serial.write(2);
-      delay(100);  // inhaling
-    }
+    stateMachine(analogRead(sensor));
+
   }
   if (countingBlow == true) {
     if (analogRead(sensor) < 110) {
 
       interval = timeEnd - timeStart;
-      capacity = interval * maxSpeed * sensorCSA;
-      Serial.println("capacity " + capacity);
+      capacity = int(interval * maxSpeed * sensorCSA);
+      Serial.println("time " + interval);
+      Serial.print("capacity ");
+      Serial.println(capacity);
+      //      Serial.write(capacity);
       delay(1000);
 
       check = true;
-      //    countingBlow = false;
+      countingBlow = false;
 
 
     } else {
       timeEnd = millis();
       if (analogRead(sensor) > maxSpeed) {
         maxSpeed = analogRead(sensor);
-
-        //    mValue = int(map(analogRead(sensor), 100, 900, 10, 255));
-        //    Serial.write(mValue);
-        //    delay(100);
       }
     }
   }
   delay(500);
 }
 
+void stateMachine(int i) {
+  if (i >= 115) {
+    Serial.println("Blowing");
+    Serial.println(i);
+    //      Serial.write(0);
+    countingBlow = true;
+    timeStart = millis();
+    check = false;
+    delay(200);
+  } else if (i < 99) {
+    Serial.println("inhaling");
+    Serial.println(i);
+    //     Serial.write(1);
+    delay(100);
+  } else {
+    Serial.println("stand by");
+    Serial.println(i);
+    //      Serial.write(2);
+    delay(100);
+  }
 
+
+}
 
 

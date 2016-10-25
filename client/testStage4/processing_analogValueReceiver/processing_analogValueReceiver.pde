@@ -1,4 +1,4 @@
- import processing.serial.*;
+import processing.serial.*;
 
 Serial myPort;  // Create object from Serial class
 int stateNow;      // current state
@@ -26,20 +26,19 @@ void serialEvent(Serial myPort) {
       }
     } 
 
-      switch(stateNow) {   
+      switch(stateNow) {
       case 0:
         println("blowing");
-        
         println(myPort.read());
 
-        if (myPort.readString() != null);
-        {
-          capacity = myPort.readString();
-          println(capacity);
-          packets = Integer.parseInt(capacity);
-          println(packets);
-          delay(200);
-        }
+        //if (myPort.readString() != null);
+        //{
+        //  capacity = myPort.readString();
+        //  println(capacity);
+        //  packets = Integer.parseInt(capacity);
+        //  println(packets);
+        //  delay(200);
+        //}
 
         break;
 

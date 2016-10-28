@@ -19,6 +19,7 @@ void setup() {
 }
 
 void loop() {
+
   if (stateCheck = true) {
     stateMachine(analogRead(sensor)); // Three states : blowing, inhaling, stand by
 
@@ -29,6 +30,7 @@ void loop() {
 
       interval = timeEnd - timeStart;
       capacity = int((interval * maxSpeed * sensorCSA) / 10);
+      Serial.println(capacity);
       //      Serial.println("time " + interval);
       //      Serial.print("capacity ");
       //      Serial.println(capacity);
@@ -49,7 +51,7 @@ void loop() {
   } else if (inhaling == true) {
     //    Serial.println(capacity + "ms");
     delay(5000);
-//    delay(capacity * 100);
+    //    delay(capacity * 100);
     interval = 0;
     stateCheck = true;
     inhaling = false;
@@ -59,51 +61,51 @@ void loop() {
 }
 
 void stateMachine(int i) {
-    if (i >= 115) {
-      Serial.println("Blowing");
-      Serial.println(i);
-      //    Serial.write(0);
-      Blowing = true;
-      timeStart = millis();
-      stateCheck = false;
-      delay(100);
-    } else if (i < 99) {
-      Serial.println("inhaling");
-      Serial.println(i);
-      inhaling = true;
-      stateCheck = false;
-      //    Serial.write(1);
-      delay(100);
-    } else {
-      Serial.println("stand by");
-      Serial.println(i);
-      //    Serial.write(2);
-      stateCheck = true;
-      delay(100);
-    }
+  if (i >= 115) {
+    Serial.println("Blowing");
+    Serial.println(i);
+    //    Serial.write(0);
+    Blowing = true;
+    timeStart = millis();
+    stateCheck = false;
+    delay(100);
+  } else if (i < 99) {
+    Serial.println("inhaling");
+    Serial.println(i);
+    inhaling = true;
+    stateCheck = false;
+    //    Serial.write(1);
+    delay(100);
+  } else {
+    Serial.println("stand by");
+    Serial.println(i);
+    //    Serial.write(2);
+    stateCheck = true;
+    delay(100);
+  }
 
-//  if (i >= 115) {
-//    //    Serial.println("Blowing");
-//    //    Serial.println(i);
-//    Serial.write(0);
-//    Blowing = true;
-//    timeStart = millis();
-//    stateCheck = false;
-//    delay(100);
-//  } else if (i < 99) {
-//    //    Serial.println("inhaling");
-//    //    Serial.println(i);
-//    inhaling = true;
-//    stateCheck = false;
-//    Serial.write(1);
-//    delay(100);
-//  } else {
-//    //    Serial.println("stand by");
-//    //    Serial.println(i);
-//    //    Serial.write(2);
-//    stateCheck = true;
-//    delay(100);
-//  }
+  //  if (i >= 115) {
+  //    //    Serial.println("Blowing");
+  //    //    Serial.println(i);
+  //    Serial.write(0);
+  //    Blowing = true;
+  //    timeStart = millis();
+  //    stateCheck = false;
+  //    delay(100);
+  //  } else if (i < 99) {
+  //    //    Serial.println("inhaling");
+  //    //    Serial.println(i);
+  //    inhaling = true;
+  //    stateCheck = false;
+  //    Serial.write(1);
+  //    delay(100);
+  //  } else {
+  //    //    Serial.println("stand by");
+  //    //    Serial.println(i);
+  //    //    Serial.write(2);
+  //    stateCheck = true;
+  //    delay(100);
+  //  }
 }
 
 

@@ -4,12 +4,14 @@ Serial myPort;  // Create object from Serial class
 int stateNow;      // current state
 String capacity = null;  // lung capacity
 int packets;
+int stateRun;
 
 
 void setup() 
 {
   String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 9600);
+  myPort.write("true");
 }
 
 void draw()
@@ -17,38 +19,32 @@ void draw()
 }
 
 void serialEvent(Serial myPort) {
-  if ( myPort.available() > 0) {  
-    if (myPort.read()<10) {
+  String message = myPort.readStringUntil(13);
+  if (message != null) {
+    float  value = float(message);
+    int inValue = int(value);
 
-      stateNow = myPort.read();
-      if (stateNow == -1) {
-        stateNow = 2;
-      }
-    } 
 
-      switch(stateNow) {
-      case 0:
-        println("blowing");
-        println(myPort.read());
 
-        //if (myPort.readString() != null);
-        //{
-        //  capacity = myPort.readString();
-        //  println(capacity);
-        //  packets = Integer.parseInt(capacity);
-        //  println(packets);
-        //  delay(200);
-        //}
+    println(stateRun);
+    if (myPort.readString() == "b") {
 
-        break;
+      println(myPort.readString());
 
-      case 1:
-        println("inhaling");
-        break;
-      case 2:
-        println("Stand by");
-        println(stateNow);
-      }
-    }
-  delay(100);
-}
+    } else if (myPort.readString() == "i") 
+
+      println("inhaling");
+      myPort.write("false");
+      delay(5000);
+      myPort.write("true");
+      delay(100);
+
+    } else if (myPort.readString() == "s") {
+
+      println(myPort.readString());
+    }else{
+      println(myPort.readString());
+
+
+    //}
+  }

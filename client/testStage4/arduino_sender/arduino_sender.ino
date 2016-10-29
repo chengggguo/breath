@@ -1,4 +1,4 @@
-String state = "";
+int state;
 int d = 100;
 int sensorData = 0;
 boolean runState = false;
@@ -40,7 +40,7 @@ void loop() {
     sensorData = analogRead(A0);
 
     if (sensorData > 510) {
-      state = "0";        // blow
+      state = 0;        // blow
 //      Serial.print(sensorData);
       delay(d);
       runState = false;
@@ -49,31 +49,31 @@ void loop() {
     }
 
     else if (sensorData < 495) {
-      state = "1";      //inhale
+      state = 1;      //inhale
 //      Serial.print(sensorData);
       delay(d);
       runState = false;
     }
 
     else {
-      state = "2";      // stand by
+      state = 2;      // stand by
 //  
     }
 
 
-    if (state == "1") {         //inhale
-      Serial.print(state);
+    if (state == 1) {         //inhale
+      Serial.println(state);
       delay(d);
     }
 
-    if (state == "0") {       //blow
-      Serial.print(state);
+    if (state == 0) {       //blow
+      Serial.println(state);
       delay(d);
 
     }
 
-    if (state == "2") {     //stand by
-      Serial.print(state);
+    if (state == 2) {     //stand by
+      Serial.println(state);
       delay(d);
     }
   }
@@ -81,9 +81,9 @@ void loop() {
   if (blowing == true) {
     if (analogRead(0) < 510) {
       interval = timeEnd - timeStart;
-      Serial.print(interval);
+//      Serial.print(interval);
       capacity = int((interval * maxSpeed * sensorCSA)/10);
-      Serial.print(capacity);
+      Serial.println(capacity);
       delay(100);
 
       blowing = false;

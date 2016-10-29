@@ -5,6 +5,7 @@ int stateNow;      // current state
 String capacity = null;  // lung capacity
 int packets;
 int stateRun;
+int inValue;
 
 
 void setup() 
@@ -22,29 +23,23 @@ void serialEvent(Serial myPort) {
   String message = myPort.readStringUntil(13);
   if (message != null) {
     float  value = float(message);
-    int inValue = int(value);
-
-
-
-    println(stateRun);
-    if (myPort.readString() == "b") {
-
-      println(myPort.readString());
-
-    } else if (myPort.readString() == "i") 
-
-      println("inhaling");
-      myPort.write("false");
-      delay(5000);
-      myPort.write("true");
-      delay(100);
-
-    } else if (myPort.readString() == "s") {
-
-      println(myPort.readString());
-    }else{
-      println(myPort.readString());
-
-
-    //}
+    inValue = int(value);
   }
+
+  if (inValue == 0) {
+
+    println("blowing");
+  } else if (inValue == 1) {
+
+    println("inhaling");
+    myPort.write("false");
+    delay(5000);
+    myPort.write("true");
+    delay(100);
+  } else if (inValue == 2) {
+
+    println("stand by");
+  } else {
+    println(inValue);
+  }
+}

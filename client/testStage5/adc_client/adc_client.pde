@@ -1,21 +1,93 @@
+import processing.serial.*;
 import processing.io.*;
+import hypermedia.net.*;
+import processing.serial.*;
+
+/////MCP3008 ADC and air pruessure sensor setup
 SPI MCP;
 MCP3008 adc;
+float rawData;
 
-int CHANNELS = 0; 
-int[] channel = new int[CHANNELS];
+int sensorData = 0;
+String state = null;
+boolean runState=true;
+boolean blowing = false;
+long timeStart;
+long timeEnd;
+long interval = 0;
+int maxSpeed = 0;
+int numPackets=0;
+float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
+/////
+
+/////udp and draw() setup
+UDP udp;
+String ip;
+int port;
+boolean [] inPackets;
+int w;                      // image size
+int h;
+boolean allDataArrived;
+int startTime;
+int timeout;
+int ellapsedTime;
+int step;
+int pos;    // starting postion(pixel) of red/blue lines
+/////
+
+
 void setup() {
   // printArray(SPI.list()); // to check SPI enabled - should give [0] "spidev0.0", [1] "spidev0.1"
   adc = new MCP3008(SPI.list()[0]); // raspberry pi has 2 SPI interfaces, SPI.list()[1] is the other
   adc.settings(1000000, SPI.MSBFIRST, SPI.MODE0); // 1MHz should be OK...
-  
-  
-  
 }
 void draw() {
-  println(adc.getAnalog(0));
-  delay(500);
+  if (runState) {
+    rawData = adc.getAnalog(0);
+    sensorData = int(rawData * 100);
+    println(sensorData);
+
+    if (sensorData > 75) {
+      state = "blow";
+      runState = false;
+      timeStart = millis();
+    } else if (sensorData < 69) {
+      state = "inhale";
+    } else {
+      state = "standby";
+    }
+    println(state);
+    delay(100);
+  }
+  ///////// get the lung capacity(number of packets will be sent) -start
+  if (state == "blow") {
+    rawData = adc.getAnalog(0);
+    sensorData = int(rawData * 100);
+    if (sensorData < 75) {
+      interval = timeEnd - timeStart;
+      //      Serial.print(interval);
+      numPackets = int((interval * maxSpeed * sensorCSA)/10);
+      println(numPackets);
+      delay(1000);
+      state = "standby";
+      runState = true;
+    } else {
+      timeEnd = millis();
+      if (sensorData > maxSpeed) {
+        maxSpeed = sensorData;
+        delay(10);
+      }
+    }
+  }
+  ///////// get the lung capacity(number of packets will be sent) -end
+  
+  if(state == "inhale"){
+    
+    
+  }
 }
+
+
 
 ///////////for MCP3008(begin)
 class MCP3008 extends SPI {

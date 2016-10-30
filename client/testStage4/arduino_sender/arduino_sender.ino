@@ -17,8 +17,7 @@ void setup() {
   Serial.begin(9600);
   pinMode(13, OUTPUT);
   pinMode(A0, INPUT);
-  state = "standby";
-  runState = true;
+  state = 2;
 }
 
 void loop() {
@@ -41,7 +40,6 @@ void loop() {
 
     if (sensorData > 510) {
       state = 0;        // blow
-//      Serial.print(sensorData);
       delay(d);
       runState = false;
       timeStart = millis();

@@ -1,16 +1,15 @@
+import processing.serial.*;
 import processing.io.*;
 import hypermedia.net.*;
 import processing.serial.*;
 
-
-
-//// udp setting
+//// udp set up
 UDP udp;
 String ip;
 int port;
 int numPackets;  // lung capacity recieved from arduino
 boolean [] inPackets;
-int w;
+int w;                      // image size
 int h;
 boolean allDataArrived;
 int startTime;
@@ -18,9 +17,26 @@ int timeout;
 int ellapsedTime;
 int step;
 int pos;    // starting postion(pixel) of red/blue lines
-boolean valOn = false;
 
-void  setup() {
+
+
+////////////////////////// Serial communication set up
+Serial myPort;  // Create object from Serial class
+int stateNow;      // current state
+String capacity = null;  // lung capacity
+int packets;
+int stateRun;
+int inValue;
+boolean blowing = false;
+
+
+void setup() 
+{
+  String portName = Serial.list()[0];
+  myPort = new Serial(this, portName, 9600);
+  myPort.write("true");
+  delay(100);
+
   size(800, 600);
   background(0);
   loadPixels();
@@ -39,16 +55,15 @@ void  setup() {
   GPIO.pinMode(12, GPIO.OUTPUT);
   //frameRate(10);
 
-  for (int i = 0; i < numPackets; i++) {
+  for (int i = 0; i < numPackets; i++) {  // assign blue to the background as defalut
     inPackets[i] = false;
   }
-
-
   startTime = millis();
   timeout = 3000;
 }
 
-void draw() {
+void draw()
+{
   timer();
   //valOn = !valOn;
   if (allDataArrived == true) {
@@ -71,17 +86,45 @@ void draw() {
   }
 }
 
-void keyPressed() {
-  if (key == ' ') {
-    for (int i=0; i < numPackets; i++) {
-      String message = str(i);
-      message = message + ":\n";
-      udp.send(message, ip, port);
-    }
+void serialEvent(Serial myPort) {
+  String message = myPort.readStringUntil(13);
+  if (message != null) {
+    float  value = float(message);
+    inValue = int(value);
   }
 
-  if (key == '1') {
-    valSwitch();
+  if (inValue == 0) {                 //blowing
+    blowing = true;
+    while (blowing) {             //hold until recieve the capacity
+      if (inValue >3 ) {
+        println(inValue);
+        numPackets = inValue;
+        for (int i=0; i < numPackets; i++) {  // send packets
+          String info = str(i);
+          info = info + ":\n";
+          udp.send(info, ip, port);
+        }
+        myPort.write("true");                // turn on the analog sensor
+        delay(100);
+        blowing = false;
+      }
+    }
+
+    println("blowing");
+  } else if (inValue == 1) {
+
+    println("inhaling");
+    myPort.write("false");  // holding the arduino
+
+
+    delay(5000);
+    myPort.write("true");
+    delay(100);
+  } else if (inValue == 2) {
+
+    println("stand by");
+  } else {
+    println("someing else");
   }
 }
 
@@ -94,8 +137,8 @@ void timer() {
 
 void receive(byte[] data, String ip, int port) {
   data = subset(data, 0, data.length - 2);
-  String message = new String(data);
-  int index = int(message);
+  String info = new String(data);
+  int index = int(info);
   inPackets[index] = true;
 }
 

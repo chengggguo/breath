@@ -13,6 +13,8 @@ void setup()
   String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 9600);
   myPort.write("true");
+  delay(100);
+
 }
 
 void draw()
@@ -32,7 +34,9 @@ void serialEvent(Serial myPort) {
   } else if (inValue == 1) {
 
     println("inhaling");
-    myPort.write("false");
+    myPort.write("false");  // holding the arduino
+    
+    
     delay(5000);
     myPort.write("true");
     delay(100);
@@ -41,5 +45,7 @@ void serialEvent(Serial myPort) {
     println("stand by");
   } else {
     println(inValue);
+    myPort.write("true");
+    delay(100);
   }
 }

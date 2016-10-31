@@ -18,7 +18,7 @@ long interval = 0;
 int maxSpeed = 0;
 int numPackets=0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
-/////
+/////~
 
 /////udp and draw() setup
 UDP udp;
@@ -33,42 +33,84 @@ int timeout;
 int ellapsedTime;
 int step;
 int pos;    // starting postion(pixel) of red/blue lines
-/////
+/////~
 
 
 void setup() {
-  // printArray(SPI.list()); // to check SPI enabled - should give [0] "spidev0.0", [1] "spidev0.1"
-  adc = new MCP3008(SPI.list()[0]); // raspberry pi has 2 SPI interfaces, SPI.list()[1] is the other
+  /////MCP3008 adc
+  adc = new MCP3008(SPI.list()[0]); 
   adc.settings(1000000, SPI.MSBFIRST, SPI.MODE0); // 1MHz should be OK...
+  /////~
+
+  ///// -red/blue dataVis
+  size(800, 600);
+  background(0);
+  loadPixels();
+  port = 10002;
+  w = width;
+  h = height;
+
+  /////~
+
+  //numPackets = 1000;
+  //step = w*h/numPackets;
+  //for (int i = 0; i < numPackets; i++) {  // assign blue to the background as defalut
+  //inPackets[i] = false;
+  //}
+
+  /////udp
+  ip = "localhost"; 
+  //inPackets = new boolean[numPackets];
+  allDataArrived = false;
+  udp = new UDP( this, 10001);
+  udp.listen(true);
+  startTime = millis();
+  timeout = 3000;
+  /////~
+
+  /////GPIO -valve switch
+  GPIO.pinMode(12, GPIO.OUTPUT);
+  //frameRate(10);
+  /////~
 }
 void draw() {
   if (runState) {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
-    println(sensorData);
-
+    //println(sensorData);
     if (sensorData > 75) {
       state = "blow";
       runState = false;
       timeStart = millis();
-    } else if (sensorData < 69) {
+    } else if (sensorData < 68) {
+      println(sensorData);
       state = "inhale";
     } else {
       state = "standby";
     }
     println(state);
-    delay(100);
   }
-  ///////// get the lung capacity(number of packets will be sent) -start
+
+  ///////// get the lung capacity 
   if (state == "blow") {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     if (sensorData < 75) {
       interval = timeEnd - timeStart;
       //      Serial.print(interval);
-      numPackets = int((interval * maxSpeed * sensorCSA)/10);
+      numPackets = int((interval * maxSpeed * sensorCSA)/100);
       println(numPackets);
       delay(1000);
+      inPackets = new boolean[numPackets];
+      for (int i = 0; i < numPackets; i++) {  // assign blue to the background as defalut
+        inPackets[i] = false;
+      }
+      for (int i = 0; i < numPackets; i++) {  
+        String message = str(i);
+        message = message + ":\n";
+        udp.send(message, ip, port);
+      }
+      println("packets sent");
       state = "standby";
       runState = true;
     } else {
@@ -79,17 +121,42 @@ void draw() {
       }
     }
   }
-  ///////// get the lung capacity(number of packets will be sent) -end
-  
-  if(state == "inhale"){
-    
-    
+  ///////// send packets(capacity)
+  //for (int i=0; i < numPackets; i++) {
+  //  String message = str(i);
+  //  message = message + ":\n";
+  //  udp.send(message, ip, port);
+  //}
+  //println("packets sent");
+  /////~
+  //timer();
+  if (allDataArrived == true) {
+    step = w*h/numPackets;
+    for (int i=0; i < numPackets; i++) {
+      pos = i*step;      
+      if (inPackets[i] == true) {
+        for (int n = 0; n < step; n++) {          
+          color red = color(46, 49, 146);
+          pixels[n + pos] = red;
+        }
+      } else {
+        for (int n = 0; n < step; n++) {          
+          color blue = color(237, 28, 36);
+          pixels[n + pos] = blue;
+        }
+      }
+    }
+    updatePixels();
+  }
+
+  if (state == "inhale") {
+    valSwitch();
   }
 }
 
 
 
-///////////for MCP3008(begin)
+///////////for MCP3008
 class MCP3008 extends SPI {
   MCP3008(String dev) {
     super(dev);
@@ -117,4 +184,33 @@ int returnADC(int ch) {
   int result = ((highInt & 3) << 8) + lowInt; // adds lowest 2 bits of 2nd byte to 3rd byte to get 10 bit result 
   return result;
 }
-///////////////for MCP3008(end)
+///////////////
+
+void timer() {
+  ellapsedTime = millis() - startTime;
+  if (ellapsedTime > timeout) {
+    allDataArrived = true;
+  }
+}
+
+void receive(byte[] data, String ip, int port) {
+  data = subset(data, 0, data.length - 2);
+  String info = new String(data);
+  int index = int(info);
+  inPackets[index] = true;
+}
+
+void valSwitch() {
+  //println(inPackets.length);
+  for (int i = 0; i < numPackets; i++) {
+    if (inPackets[i] == true) {
+      GPIO.digitalWrite(12, GPIO.HIGH);
+      delay(50);
+    } else {
+      GPIO.digitalWrite(12, GPIO.LOW);
+      delay(50);
+    }
+  }
+  println("done");
+  state = "standby";
+}

@@ -16,7 +16,8 @@ long timeStart;
 long timeEnd;
 long interval = 0;
 int maxSpeed = 0;
-int numPackets=0;
+int initPackets=0;
+int numPackets = 0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
 /////~
 
@@ -52,15 +53,15 @@ void setup() {
 
   /////~
 
-  //numPackets = 1000;
-  //step = w*h/numPackets;
-  //for (int i = 0; i < numPackets; i++) {  // assign blue to the background as defalut
+  //initPackets = 1000;
+  //step = w*h/initPackets;
+  //for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
   //inPackets[i] = false;
   //}
 
   /////udp
   ip = "localhost"; 
-  //inPackets = new boolean[numPackets];
+  //inPackets = new boolean[initPackets];
   allDataArrived = false;
   udp = new UDP( this, 10001);
   udp.listen(true);
@@ -98,14 +99,14 @@ void draw() {
     if (sensorData < 75) {
       interval = timeEnd - timeStart;
       //      Serial.print(interval);
-      numPackets = int((interval * maxSpeed * sensorCSA)/100);
-      println(numPackets);
+      initPackets = int((interval * maxSpeed * sensorCSA)/100);
+      println(initPackets);
       delay(1000);
-      inPackets = new boolean[numPackets];
-      for (int i = 0; i < numPackets; i++) {  // assign blue to the background as defalut
+      inPackets = new boolean[initPackets];
+      for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
         inPackets[i] = false;
       }
-      for (int i = 0; i < numPackets; i++) {  
+      for (int i = 0; i < initPackets; i++) {  
         String message = str(i);
         message = message + ":\n";
         udp.send(message, ip, port);
@@ -122,31 +123,37 @@ void draw() {
     }
   }
   ///////// send packets(capacity)
-  //for (int i=0; i < numPackets; i++) {
+  //for (int i=0; i < initPackets; i++) {
   //  String message = str(i);
   //  message = message + ":\n";
   //  udp.send(message, ip, port);
   //}
   //println("packets sent");
   /////~
-  //timer();
+  timer();
   if (allDataArrived == true) {
-    step = w*h/numPackets;
-    for (int i=0; i < numPackets; i++) {
-      pos = i*step;      
-      if (inPackets[i] == true) {
-        for (int n = 0; n < step; n++) {          
-          color red = color(46, 49, 146);
-          pixels[n + pos] = red;
-        }
-      } else {
-        for (int n = 0; n < step; n++) {          
-          color blue = color(237, 28, 36);
-          pixels[n + pos] = blue;
+    if (initPackets != 0) {
+      step = w*h/initPackets;
+      for (int i=0; i < initPackets; i++) {
+        pos = i*step;      
+        if (inPackets[i] == true) {
+          for (int n = 0; n < step; n++) {          
+            color red = color(46, 49, 146);
+            pixels[n + pos] = red;
+          }
+          numPackets = numPackets + 1;
+          println(numPackets);
+        } else {
+          for (int n = 0; n < step; n++) {          
+            color blue = color(237, 28, 36);
+            pixels[n + pos] = blue;
+          }
         }
       }
+
+      updatePixels();
     }
-    updatePixels();
+    allDataArrived = false;
   }
 
   if (state == "inhale") {
@@ -202,7 +209,7 @@ void receive(byte[] data, String ip, int port) {
 
 void valSwitch() {
   //println(inPackets.length);
-  for (int i = 0; i < numPackets; i++) {
+  for (int i = 0; i < initPackets; i++) {
     if (inPackets[i] == true) {
       GPIO.digitalWrite(12, GPIO.HIGH);
       delay(50);

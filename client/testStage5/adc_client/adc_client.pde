@@ -80,7 +80,7 @@ void draw() {
       state = "blow";
       runState = false;
       blowStart = millis();
-    } else if (sensorData < 68) {
+    } else if (sensorData < 63) {
       println(sensorData);
       state = "inhale";
       runState = false;
@@ -95,12 +95,13 @@ void draw() {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     if (sensorData < 75) {
-      interval = blowEnd - blowStart;
-      initPackets = int((interval * maxSpeed * sensorCSA)/100);
-      println(initPackets);
-      delay(1000);
-      startTime = millis();
       if (init) {
+        interval = blowEnd - blowStart;
+        initPackets = int((interval * maxSpeed * sensorCSA)/100);
+        println(initPackets);
+        delay(1000);
+        startTime = millis();
+
         inPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
           inPackets[i] = false;
@@ -110,20 +111,23 @@ void draw() {
           message = message + ":\n";
           udp.send(message, ip, port);
         }
+        allSent = true;
       } else {
+        startTime = millis();
         for (int i = 0; i < initPackets; i++) { 
-          if (inPackets[1] ==true) {
+          if (inPackets[i] ==true) {
             String message = str(i);
             message = message + ":\n";
             udp.send(message, ip, port);
           }
         }
+        allSent = true;
       }
 
       println("packets sent");
       state = "standby";
       runState = true;
-      allSent = true;
+      //allSent = true;
     } else {
       blowEnd = millis();
       if (sensorData > maxSpeed) {
@@ -142,11 +146,27 @@ void draw() {
         if (initPackets != 0) {
           step = w*h/initPackets;
           pixelUpdate();
+          allSent = false;
+          allDataArrived = false;
+
+          init = false;
         }
-        //allDataArrived = false;
-        delay(800);
       }
-      //allSent = false;
+    }
+  } else {
+    if (allSent == true) {
+      //println("draw");
+      //delay(1000);
+      timer();
+      if (allDataArrived == true) {
+        println("allArrived");
+        if (initPackets != 0) {
+          step = w*h/initPackets;
+          pixelUpdate();
+          allSent = false;
+          allDataArrived = false;
+        }
+      }
     }
   }
 
@@ -241,7 +261,6 @@ void pixelUpdate() {
 
   updatePixels();
   println("updated");
-  init = false;
   println("lost: " + lostPackets);
   println("all: " +initPackets);
   delay(3000);

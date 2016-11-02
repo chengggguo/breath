@@ -21,7 +21,7 @@ int pos;
 boolean valOn = false;
 
 ////adc setting(class)
-MCP3008 adc;
+//MCP3008 adc;
 
 
 void  setup() {
@@ -60,12 +60,12 @@ void draw() {
       pos = i*step;      
       if (inPackets[i] == true) {
         for (int n = 0; n < step; n++) {          
-          color red = color(46, 49, 146);
+          color red = color(237, 28, 36);
           pixels[n + pos] = red;
         }
       } else {
         for (int n = 0; n < step; n++) {          
-          color blue = color(237, 28, 36);
+          color blue = color(46, 49,146);
           pixels[n + pos] = blue;
         }
       }

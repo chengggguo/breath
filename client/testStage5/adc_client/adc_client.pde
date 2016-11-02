@@ -12,13 +12,14 @@ int sensorData = 0;
 String state = null;
 boolean runState=true;
 boolean blowing = false;
-long timeStart;
-long timeEnd;
+long blowStart;
+long blowEnd;
 long interval = 0;
 int maxSpeed = 0;
 int initPackets=0;
-int numPackets = 0;
+int lostPackets = 0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
+boolean init;
 /////~
 
 /////udp and draw() setup
@@ -28,6 +29,7 @@ int port;
 boolean [] inPackets;
 int w;                      // image size
 int h;
+boolean allSent;
 boolean allDataArrived;
 int startTime;
 int timeout;
@@ -45,27 +47,22 @@ void setup() {
 
   ///// -red/blue dataVis
   size(800, 600);
-  background(0);
+  background(237, 28, 36);
   loadPixels();
   port = 10002;
   w = width;
   h = height;
-
+  init = true;
   /////~
-
-  //initPackets = 1000;
-  //step = w*h/initPackets;
-  //for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
-  //inPackets[i] = false;
-  //}
 
   /////udp
   ip = "localhost"; 
   //inPackets = new boolean[initPackets];
   allDataArrived = false;
+  allSent = false;
   udp = new UDP( this, 10001);
   udp.listen(true);
-  startTime = millis();
+  //startTime = millis();
   timeout = 3000;
   /////~
 
@@ -82,10 +79,11 @@ void draw() {
     if (sensorData > 75) {
       state = "blow";
       runState = false;
-      timeStart = millis();
+      blowStart = millis();
     } else if (sensorData < 68) {
       println(sensorData);
       state = "inhale";
+      runState = false;
     } else {
       state = "standby";
     }
@@ -97,67 +95,81 @@ void draw() {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     if (sensorData < 75) {
-      interval = timeEnd - timeStart;
+      interval = blowEnd - blowStart;
       //      Serial.print(interval);
       initPackets = int((interval * maxSpeed * sensorCSA)/100);
       println(initPackets);
       delay(1000);
       inPackets = new boolean[initPackets];
+      startTime = millis();
       for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
         inPackets[i] = false;
       }
-      for (int i = 0; i < initPackets; i++) {  
+      for (int i = 0; i < initPackets; i++) { 
         String message = str(i);
         message = message + ":\n";
         udp.send(message, ip, port);
       }
+
       println("packets sent");
       state = "standby";
       runState = true;
+      allSent = true;
     } else {
-      timeEnd = millis();
+      blowEnd = millis();
       if (sensorData > maxSpeed) {
         maxSpeed = sensorData;
         delay(10);
       }
     }
   }
-  ///////// send packets(capacity)
-  //for (int i=0; i < initPackets; i++) {
-  //  String message = str(i);
-  //  message = message + ":\n";
-  //  udp.send(message, ip, port);
-  //}
-  //println("packets sent");
-  /////~
-  timer();
-  if (allDataArrived == true) {
-    if (initPackets != 0) {
-      step = w*h/initPackets;
-      for (int i=0; i < initPackets; i++) {
-        pos = i*step;      
-        if (inPackets[i] == true) {
-          for (int n = 0; n < step; n++) {          
-            color red = color(46, 49, 146);
-            pixels[n + pos] = red;
+  if (init== true) {
+    if (allSent == true) {
+      println("draw");
+      delay(1000);
+      timer();
+      if (allDataArrived == true) {
+        println("allArrived");
+        if (initPackets != 0) {
+          step = w*h/initPackets;
+          for (int i=0; i < initPackets; i++) {
+            pos = i*step;      
+            if (inPackets[i] == true) {
+              for (int n = 0; n < step; n++) {          
+                color red = color(237, 28, 36);
+                pixels[n + pos] = red;
+              }
+              lostPackets= lostPackets+1;
+            } else {
+              for (int n = 0; n < step; n++) {          
+                color blue = color(46, 49, 146);
+                pixels[n + pos] = blue;
+              }
+              //lostPackets= lostPackets+1;
+            }
           }
-          numPackets = numPackets + 1;
-          println(numPackets);
-        } else {
-          for (int n = 0; n < step; n++) {          
-            color blue = color(237, 28, 36);
-            pixels[n + pos] = blue;
-          }
-        }
-      }
 
-      updatePixels();
+          updatePixels();
+          println("updated");
+          init = false;
+          println(lostPackets);
+          delay(1000);
+        }
+        //println(lostPackets);
+        //allDataArrived = false;
+        delay(800);
+      }
+      //allSent = false;
     }
-    allDataArrived = false;
   }
 
   if (state == "inhale") {
     valSwitch();
+    runState = true;
+    state = "standby";
+  }
+  if (state == "standby") {
+    println(sensorData);
   }
 }
 

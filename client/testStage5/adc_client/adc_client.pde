@@ -96,19 +96,28 @@ void draw() {
     sensorData = int(rawData * 100);
     if (sensorData < 75) {
       interval = blowEnd - blowStart;
-      //      Serial.print(interval);
       initPackets = int((interval * maxSpeed * sensorCSA)/100);
       println(initPackets);
       delay(1000);
-      inPackets = new boolean[initPackets];
       startTime = millis();
-      for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
-        inPackets[i] = false;
-      }
-      for (int i = 0; i < initPackets; i++) { 
-        String message = str(i);
-        message = message + ":\n";
-        udp.send(message, ip, port);
+      if (init) {
+        inPackets = new boolean[initPackets];
+        for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
+          inPackets[i] = false;
+        }
+        for (int i = 0; i < initPackets; i++) { 
+          String message = str(i);
+          message = message + ":\n";
+          udp.send(message, ip, port);
+        }
+      } else {
+        for (int i = 0; i < initPackets; i++) { 
+          if (inPackets[1] ==true) {
+            String message = str(i);
+            message = message + ":\n";
+            udp.send(message, ip, port);
+          }
+        }
       }
 
       println("packets sent");
@@ -132,30 +141,8 @@ void draw() {
         println("allArrived");
         if (initPackets != 0) {
           step = w*h/initPackets;
-          for (int i=0; i < initPackets; i++) {
-            pos = i*step;      
-            if (inPackets[i] == true) {
-              for (int n = 0; n < step; n++) {          
-                color red = color(237, 28, 36);
-                pixels[n + pos] = red;
-              }
-              lostPackets= lostPackets+1;
-            } else {
-              for (int n = 0; n < step; n++) {          
-                color blue = color(46, 49, 146);
-                pixels[n + pos] = blue;
-              }
-              //lostPackets= lostPackets+1;
-            }
-          }
-
-          updatePixels();
-          println("updated");
-          init = false;
-          println(lostPackets);
-          delay(1000);
+          pixelUpdate();
         }
-        //println(lostPackets);
         //allDataArrived = false;
         delay(800);
       }
@@ -232,4 +219,30 @@ void valSwitch() {
   }
   println("done");
   state = "standby";
+  allDataArrived = false;
+}
+
+void pixelUpdate() {
+  for (int i=0; i < initPackets; i++) {
+    pos = i*step;      
+    if (inPackets[i] == false) {
+      for (int n = 0; n < step; n++) {          
+        color blue = color(46, 49, 146);
+        pixels[n + pos] = blue;
+      }
+      lostPackets= lostPackets+1;
+    } else {
+      for (int n = 0; n < step; n++) {          
+        color red = color(237, 28, 36);
+        pixels[n + pos] = red;
+      }
+    }
+  }
+
+  updatePixels();
+  println("updated");
+  init = false;
+  println("lost: " + lostPackets);
+  println("all: " +initPackets);
+  delay(3000);
 }

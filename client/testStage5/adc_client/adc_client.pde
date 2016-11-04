@@ -42,7 +42,7 @@ int pos;    // starting postion(pixel) of red/blue lines
 void setup() {
   /////MCP3008 adc
   adc = new MCP3008(SPI.list()[0]); 
-  adc.settings(1000000, SPI.MSBFIRST, SPI.MODE0); // 1MHz should be OK...
+  adc.settings(100000, SPI.MSBFIRST, SPI.MODE0); // 1MHz should be OK...
   /////~
 
   ///// -red/blue dataVis
@@ -66,10 +66,9 @@ void setup() {
   timeout = 3000;
   /////~
 
-  /////GPIO -valve switch
-  GPIO.pinMode(12, GPIO.OUTPUT);
+
+  GPIO.pinMode(12, GPIO.OUTPUT);              //GPIO -valve switch
   //frameRate(10);
-  /////~
 }
 void draw() {
   if (runState) {
@@ -78,7 +77,11 @@ void draw() {
     //println(sensorData);
     if (sensorData > 75) {
       state = "blow";
+      //delay(400);
+      maxSpeed = sensorData;
+      println("key1: " + maxSpeed);
       runState = false;
+      blowing = true;
       blowStart = millis();
     } else if (sensorData < 63) {
       println(sensorData);
@@ -92,25 +95,33 @@ void draw() {
 
 
   if (state == "blow") {                        // get the lung capacity and send packets
-    rawData = adc.getAnalog(0);
-    sensorData = int(rawData * 100);
-    if (sensorData < 75) {
-      if (init) {
-        interval = blowEnd - blowStart;
-        initPackets = int((interval * maxSpeed * sensorCSA)/100);
-        println(initPackets);
-        delay(1000);
-        inPackets = new boolean[initPackets];
-        for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
-          inPackets[i] = true;
-        }
-      }
-      sendPackets();
-    } else {
+    if (init) {
+      rawData = adc.getAnalog(0);
+      sensorData = int(rawData * 100);
+      println("key2: " + sensorData);
       blowEnd = millis();
+      println("timeStart: " + blowStart);
+      println("timeEnd: " + blowEnd);
       if (sensorData > maxSpeed) {
         maxSpeed = sensorData;
       }
+      println(sensorData + "/" + maxSpeed);
+      if (sensorData < 75) {
+        println("b: " + sensorData);
+        interval = blowEnd - blowStart;
+        println(interval * maxSpeed * sensorCSA);
+        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
+        println("packets" + initPackets);
+        println("time: " + interval);
+        delay(1000);
+        inPackets = new boolean[initPackets];
+        for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
+          inPackets[i] = true;
+        }
+        sendPackets();
+      }
+    } else {
+      sendPackets();
     }
   }
 
@@ -165,14 +176,14 @@ int returnADC(int ch) {
 }
 ///////////////
 
-void timer() {
+void timer() {           // timeout for udp communication
   ellapsedTime = millis() - startTime;
   if (ellapsedTime > timeout) {
     allDataArrived = true;
   }
 }
 
-void receive(byte[] data, String ip, int port) {
+void receive(byte[] data, String ip, int port) {    
   data = subset(data, 0, data.length - 2);
   String info = new String(data);
   int index = int(info);
@@ -195,7 +206,7 @@ void valSwitch() {
   allDataArrived = false;
 }
 
-void pixelUpdate() {
+void pixelUpdate() {        //red/blue dataVis
   println("draw");
   delay(1000);
   timer();
@@ -205,7 +216,6 @@ void pixelUpdate() {
       println("xxx");
 
       for (int i=0; i < initPackets; i++) {
-        print(inPackets[i]);
         pos = i*step;      
         if (inPackets[i] == false) {
           for (int n = 0; n < step; n++) {          

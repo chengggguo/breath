@@ -90,8 +90,8 @@ void draw() {
     println(state);
   }
 
-  ///////// get the lung capacity 
-  if (state == "blow") {
+
+  if (state == "blow") {                        // get the lung capacity and send packets
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     if (sensorData < 75) {
@@ -100,83 +100,36 @@ void draw() {
         initPackets = int((interval * maxSpeed * sensorCSA)/100);
         println(initPackets);
         delay(1000);
-        startTime = millis();
-
         inPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign blue to the background as defalut
-          inPackets[i] = false;
+          inPackets[i] = true;
         }
-        for (int i = 0; i < initPackets; i++) { 
-          String message = str(i);
-          message = message + ":\n";
-          udp.send(message, ip, port);
-        }
-        allSent = true;
-      } else {
-        startTime = millis();
-        for (int i = 0; i < initPackets; i++) { 
-          if (inPackets[i] ==true) {
-            String message = str(i);
-            message = message + ":\n";
-            udp.send(message, ip, port);
-          }
-        }
-        allSent = true;
       }
-
-      println("packets sent");
-      state = "standby";
-      runState = true;
-      //allSent = true;
+      sendPackets();
     } else {
       blowEnd = millis();
       if (sensorData > maxSpeed) {
         maxSpeed = sensorData;
-        delay(10);
-      }
-    }
-  }
-  if (init== true) {
-    if (allSent == true) {
-      println("draw");
-      delay(1000);
-      timer();
-      if (allDataArrived == true) {
-        println("allArrived");
-        if (initPackets != 0) {
-          step = w*h/initPackets;
-          pixelUpdate();
-          allSent = false;
-          allDataArrived = false;
-
-          init = false;
-        }
-      }
-    }
-  } else {
-    if (allSent == true) {
-      //println("draw");
-      //delay(1000);
-      timer();
-      if (allDataArrived == true) {
-        println("allArrived");
-        if (initPackets != 0) {
-          step = w*h/initPackets;
-          pixelUpdate();
-          allSent = false;
-          allDataArrived = false;
-        }
       }
     }
   }
 
-  if (state == "inhale") {
+  if (state == "inhale") {                      //drive valves
     valSwitch();
     runState = true;
     state = "standby";
   }
-  if (state == "standby") {
+  if (state == "standby") {                    //do nothing
     println(sensorData);
+  }
+
+
+  if (allSent == true) {                      //update pixels
+    if (init) {
+      step = w*h/initPackets;
+      init =false;
+    }
+    pixelUpdate();
   }
 }
 
@@ -243,25 +196,54 @@ void valSwitch() {
 }
 
 void pixelUpdate() {
-  for (int i=0; i < initPackets; i++) {
-    pos = i*step;      
-    if (inPackets[i] == false) {
-      for (int n = 0; n < step; n++) {          
-        color blue = color(46, 49, 146);
-        pixels[n + pos] = blue;
+  println("draw");
+  delay(1000);
+  timer();
+  if (allDataArrived == true) {
+    println("allArrived");
+    if (initPackets != 0) {
+      println("xxx");
+
+      for (int i=0; i < initPackets; i++) {
+        print(inPackets[i]);
+        pos = i*step;      
+        if (inPackets[i] == false) {
+          for (int n = 0; n < step; n++) {          
+            color blue = color(46, 49, 146);
+            pixels[n + pos] = blue;
+          }
+          lostPackets= lostPackets+1;
+        } else {
+          for (int n = 0; n < step; n++) {          
+            color red = color(237, 28, 36);
+            pixels[n + pos] = red;
+          }
+        }
       }
-      lostPackets= lostPackets+1;
-    } else {
-      for (int n = 0; n < step; n++) {          
-        color red = color(237, 28, 36);
-        pixels[n + pos] = red;
-      }
+      //print(inPackets);
+      updatePixels();
+      println("updated");
+      println("lost: " + lostPackets);
+      println("all: " +initPackets);
+      delay(3000);
+    }
+    allSent = false;
+    allDataArrived = false;
+  }
+}
+
+void sendPackets() {
+  startTime = millis();
+  for (int i = 0; i < initPackets; i++) { 
+    if (inPackets[i] == true) {
+      inPackets[i] = false;
+      String message = str(i);
+      message = message + ":\n";
+      udp.send(message, ip, port);
     }
   }
-
-  updatePixels();
-  println("updated");
-  println("lost: " + lostPackets);
-  println("all: " +initPackets);
-  delay(3000);
+  allSent = true;
+  println("packets sent");
+  state = "standby";
+  runState = true;
 }

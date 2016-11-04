@@ -36,7 +36,10 @@ int timeout;
 int ellapsedTime;
 int step;
 int pos;    // starting postion(pixel) of red/blue lines
+
 /////~
+int sent = 0;
+int receive = 0;
 
 
 void setup() {
@@ -61,7 +64,7 @@ void setup() {
   allDataArrived = false;
   allSent = false;
   udp = new UDP( this, 10001);
-  udp.listen(true);
+  //udp.listen(true);
   //startTime = millis();
   timeout = 3000;
   /////~
@@ -114,6 +117,7 @@ void draw() {
         println("packets" + initPackets);
         println("time: " + interval);
         delay(1000);
+        initPackets=2000; /////////////////////////////////////
         inPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
           inPackets[i] = true;
@@ -177,17 +181,24 @@ int returnADC(int ch) {
 ///////////////
 
 void timer() {           // timeout for udp communication
+
+
   ellapsedTime = millis() - startTime;
   if (ellapsedTime > timeout) {
     allDataArrived = true;
+
+    println("receive: " + receive);
   }
 }
 
-void receive(byte[] data, String ip, int port) {    
+void receiveeive(byte[] data, String ip, int port) {    
   data = subset(data, 0, data.length - 2);
   String info = new String(data);
   int index = int(info);
   inPackets[index] = true;
+  if (inPackets[index] == true) {
+    receive = receive +1;
+  }
 }
 
 void valSwitch() {
@@ -210,7 +221,9 @@ void pixelUpdate() {        //red/blue dataVis
   println("draw");
   delay(1000);
   timer();
+
   if (allDataArrived == true) {
+    udp.listen(false);
     println("allArrived");
     if (initPackets != 0) {
       println("xxx");
@@ -235,6 +248,7 @@ void pixelUpdate() {        //red/blue dataVis
       println("updated");
       println("lost: " + lostPackets);
       println("all: " +initPackets);
+      lostPackets = 0;
       delay(3000);
     }
     allSent = false;
@@ -244,15 +258,20 @@ void pixelUpdate() {        //red/blue dataVis
 
 void sendPackets() {
   startTime = millis();
-  for (int i = 0; i < initPackets; i++) { 
+  udp.listen(true);
+  for (int i = 0; i <  initPackets; i++) { 
     if (inPackets[i] == true) {
       inPackets[i] = false;
       String message = str(i);
       message = message + ":\n";
       udp.send(message, ip, port);
+      sent=sent+1;
     }
   }
+  println("sent: " +sent);
+  sent = 0;
   allSent = true;
+
   println("packets sent");
   state = "standby";
   runState = true;

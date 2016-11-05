@@ -64,15 +64,18 @@ void setup() {
   allDataArrived = false;
   allSent = false;
   udp = new UDP( this, 10001);
-  //udp.listen(true);
+  udp.listen(true);
   //startTime = millis();
   timeout = 3000;
   /////~
 
 
-  GPIO.pinMode(12, GPIO.OUTPUT);              //GPIO -valve switch
+  GPIO.pinMode(12, GPIO.OUTPUT);              //GPIO -valve inhale
+  GPIO.pinMode(16, GPIO.OUTPUT);              // GPIO -valve state(exhale/inhale)
   //frameRate(10);
 }
+
+//////////////////////////////////////////// main loop
 void draw() {
   if (runState) {
     rawData = adc.getAnalog(0);
@@ -86,12 +89,15 @@ void draw() {
       runState = false;
       blowing = true;
       blowStart = millis();
+      GPIO.digitalWrite(16, GPIO.HIGH);        //exhale
     } else if (sensorData < 63) {
       println(sensorData);
       state = "inhale";
       runState = false;
+      GPIO.digitalWrite(16, GPIO.LOW);      //inhale
     } else {
       state = "standby";
+      GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
     }
     println(state);
   }
@@ -101,6 +107,11 @@ void draw() {
     if (init) {
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
+      for (int i = 0; i<5; i++) {
+        if (maxSpeed < sensorData) {
+          maxSpeed = sensorData;
+        }
+      }
       println("key2: " + sensorData);
       blowEnd = millis();
       println("timeStart: " + blowStart);
@@ -116,13 +127,14 @@ void draw() {
         initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
-        delay(1000);
-        initPackets=2000; /////////////////////////////////////
+        //delay(1000);
+        initPackets=1000; /////////////////////////////////////
         inPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
           inPackets[i] = true;
         }
         sendPackets();
+        GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
       }
     } else {
       sendPackets();
@@ -133,6 +145,7 @@ void draw() {
     valSwitch();
     runState = true;
     state = "standby";
+    GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
   }
   if (state == "standby") {                    //do nothing
     println(sensorData);
@@ -145,6 +158,7 @@ void draw() {
       init =false;
     }
     pixelUpdate();
+    GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
   }
 }
 
@@ -181,17 +195,37 @@ int returnADC(int ch) {
 ///////////////
 
 void timer() {           // timeout for udp communication
-
-
   ellapsedTime = millis() - startTime;
   if (ellapsedTime > timeout) {
     allDataArrived = true;
 
     println("receive: " + receive);
+    receive = 0;
   }
 }
 
-void receiveeive(byte[] data, String ip, int port) {    
+void sendPackets() {
+  startTime = millis();
+  //udp.listen(true);
+  for (int i = 0; i <  initPackets; i++) { 
+    if (inPackets[i] == true) {
+      inPackets[i] = false;
+      String message = str(i);
+      message = message + ":\n";
+      udp.send(message, ip, port);
+      sent=sent+1;
+    }
+  }
+  println("sent: " +sent);
+  sent = 0;
+  allSent = true;
+
+  println("packets sent");
+  state = "standby";
+  runState = true;
+}
+
+void receive(byte[] data, String ip, int port) {    
   data = subset(data, 0, data.length - 2);
   String info = new String(data);
   int index = int(info);
@@ -201,21 +235,7 @@ void receiveeive(byte[] data, String ip, int port) {
   }
 }
 
-void valSwitch() {
-  //println(inPackets.length);
-  for (int i = 0; i < initPackets; i++) {
-    if (inPackets[i] == true) {
-      GPIO.digitalWrite(12, GPIO.HIGH);
-      delay(50);
-    } else {
-      GPIO.digitalWrite(12, GPIO.LOW);
-      delay(50);
-    }
-  }
-  println("done");
-  state = "standby";
-  allDataArrived = false;
-}
+
 
 void pixelUpdate() {        //red/blue dataVis
   println("draw");
@@ -223,12 +243,12 @@ void pixelUpdate() {        //red/blue dataVis
   timer();
 
   if (allDataArrived == true) {
-    udp.listen(false);
+    //udp.listen(false);
     println("allArrived");
     if (initPackets != 0) {
       println("xxx");
 
-      for (int i=0; i < initPackets; i++) {
+      for (int i=0 ; i < initPackets; i++) {
         pos = i*step;      
         if (inPackets[i] == false) {
           for (int n = 0; n < step; n++) {          
@@ -256,23 +276,26 @@ void pixelUpdate() {        //red/blue dataVis
   }
 }
 
-void sendPackets() {
-  startTime = millis();
-  udp.listen(true);
-  for (int i = 0; i <  initPackets; i++) { 
+
+void valSwitch() {
+  //println(inPackets.length);
+  for (int i = 0; i < initPackets; i++) {
     if (inPackets[i] == true) {
-      inPackets[i] = false;
-      String message = str(i);
-      message = message + ":\n";
-      udp.send(message, ip, port);
-      sent=sent+1;
+      GPIO.digitalWrite(12, GPIO.HIGH);
+      delay(50);
+    } else {
+      GPIO.digitalWrite(12, GPIO.LOW);
+      delay(50);
     }
   }
-  println("sent: " +sent);
-  sent = 0;
-  allSent = true;
-
-  println("packets sent");
+  println("done");
   state = "standby";
-  runState = true;
+  allDataArrived = false;
+}
+
+void keyPressed() {
+  background(237, 28, 36);
+  loadPixels();
+  init = true;
+
 }

@@ -3,6 +3,12 @@ import processing.io.*;
 import hypermedia.net.*;
 import processing.serial.*;
 
+Serial myPort;            //Serial communication for sending number to arduino
+
+JSONObject json;          //create a json object to store the total number of lost Packets
+int temLost;
+int totalLost;
+
 /////MCP3008 ADC and air pruessure sensor setup
 SPI MCP;
 MCP3008 adc;
@@ -73,6 +79,12 @@ void setup() {
   GPIO.pinMode(12, GPIO.OUTPUT);              //GPIO -valve inhale
   GPIO.pinMode(16, GPIO.OUTPUT);              // GPIO -valve state(exhale/inhale)
   //frameRate(10);
+
+  String portName = Serial.list()[0];
+  //myPort = new Serial(this, portName, 9600);
+
+  json = loadJSONObject("new.json");
+  totalLost = json.getInt("lost");
 }
 
 //////////////////////////////////////////// main loop
@@ -248,7 +260,7 @@ void pixelUpdate() {        //red/blue dataVis
     if (initPackets != 0) {
       println("xxx");
 
-      for (int i=0 ; i < initPackets; i++) {
+      for (int i=0; i < initPackets; i++) {
         pos = i*step;      
         if (inPackets[i] == false) {
           for (int n = 0; n < step; n++) {          
@@ -268,6 +280,11 @@ void pixelUpdate() {        //red/blue dataVis
       println("updated");
       println("lost: " + lostPackets);
       println("all: " +initPackets);
+      temLost = lostPackets + totalLost;
+      println(temLost);
+
+
+
       lostPackets = 0;
       delay(3000);
     }
@@ -297,5 +314,11 @@ void keyPressed() {
   background(237, 28, 36);
   loadPixels();
   init = true;
-
+  json.setInt("lost", temLost);
+  //json = new JSONObject();
+  saveJSONObject(json, "data/new.json");
+  delay(50);
+  json = loadJSONObject("new.json");
+  totalLost = json.getInt("lost");
+  println(totalLost);
 }

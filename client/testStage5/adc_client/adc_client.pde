@@ -6,13 +6,17 @@ import processing.serial.*;
 Serial myPort;            //Serial communication for sending number to arduino
 
 JSONObject json;          //create a json object to store the total number of lost Packets
-int temLost;
-int totalLost;
+String temLost;
+String totalLost;
+String converted = "";
+int first;
+int second;
 
 /////MCP3008 ADC and air pruessure sensor setup
 SPI MCP;
 MCP3008 adc;
 float rawData;
+boolean packetsSent =false;
 
 int sensorData = 0;
 String state = null;
@@ -47,7 +51,6 @@ int pos;    // starting postion(pixel) of red/blue lines
 int sent = 0;
 int receive = 0;
 
-
 void setup() {
   /////MCP3008 adc
   adc = new MCP3008(SPI.list()[0]); 
@@ -81,10 +84,10 @@ void setup() {
   //frameRate(10);
 
   String portName = Serial.list()[0];
-  //myPort = new Serial(this, portName, 9600);
+  myPort = new Serial(this, portName, 9600);
 
   json = loadJSONObject("new.json");
-  totalLost = json.getInt("lost");
+  //totalLost = json.getString("lost");
 }
 
 //////////////////////////////////////////// main loop
@@ -93,7 +96,7 @@ void draw() {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     //println(sensorData);
-    if (sensorData > 75) {
+    if (sensorData > 80) {
       state = "blow";
       //delay(400);
       maxSpeed = sensorData;
@@ -102,7 +105,7 @@ void draw() {
       blowing = true;
       blowStart = millis();
       GPIO.digitalWrite(16, GPIO.HIGH);        //exhale
-    } else if (sensorData < 63) {
+    } else if (sensorData < 69) {
       println(sensorData);
       state = "inhale";
       runState = false;
@@ -110,6 +113,7 @@ void draw() {
     } else {
       state = "standby";
       GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
+      packetsSent = false;
     }
     println(state);
   }
@@ -132,24 +136,35 @@ void draw() {
         maxSpeed = sensorData;
       }
       println(sensorData + "/" + maxSpeed);
-      if (sensorData < 75) {
+      if (sensorData < 74) {
         println("b: " + sensorData);
         interval = blowEnd - blowStart;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/1000) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
         //delay(1000);
-        initPackets=1000; /////////////////////////////////////
+        //initPackets=1000; /////////////////////////////////////
         inPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
           inPackets[i] = true;
         }
         sendPackets();
+        state = "standby";
+        runState = true;
         GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
       }
     } else {
-      sendPackets();
+      if (!packetsSent) {
+        sendPackets();
+      }
+      rawData = adc.getAnalog(0);
+      sensorData = int(rawData * 100);
+
+      if (sensorData <75) {
+        state = "standby";
+        runState = true;
+      }
     }
   }
 
@@ -157,7 +172,6 @@ void draw() {
     valSwitch();
     runState = true;
     state = "standby";
-    GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
   }
   if (state == "standby") {                    //do nothing
     println(sensorData);
@@ -170,7 +184,6 @@ void draw() {
       init =false;
     }
     pixelUpdate();
-    GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
   }
 }
 
@@ -231,10 +244,8 @@ void sendPackets() {
   println("sent: " +sent);
   sent = 0;
   allSent = true;
-
+  packetsSent = true;
   println("packets sent");
-  state = "standby";
-  runState = true;
 }
 
 void receive(byte[] data, String ip, int port) {    
@@ -250,8 +261,8 @@ void receive(byte[] data, String ip, int port) {
 
 
 void pixelUpdate() {        //red/blue dataVis
-  println("draw");
-  delay(1000);
+  //println("draw");
+  //delay(1000);
   timer();
 
   if (allDataArrived == true) {
@@ -260,8 +271,8 @@ void pixelUpdate() {        //red/blue dataVis
     if (initPackets != 0) {
       println("xxx");
 
-      for (int i=0; i < initPackets; i++) {
-        pos = i*step;      
+      for (int i=200; i < initPackets; i++) {  ////////////////// i=0
+        pos = (i-200)*step;      
         if (inPackets[i] == false) {
           for (int n = 0; n < step; n++) {          
             color blue = color(46, 49, 146);
@@ -281,9 +292,9 @@ void pixelUpdate() {        //red/blue dataVis
       println("lost: " + lostPackets);
       println("all: " +initPackets);
       temLost = lostPackets + totalLost;
+      ledPrint(temLost);
+
       println(temLost);
-
-
 
       lostPackets = 0;
       delay(3000);
@@ -314,11 +325,172 @@ void keyPressed() {
   background(237, 28, 36);
   loadPixels();
   init = true;
-  json.setInt("lost", temLost);
+  json.setString("lost", temLost);
   //json = new JSONObject();
   saveJSONObject(json, "data/new.json");
   delay(50);
   json = loadJSONObject("new.json");
-  totalLost = json.getInt("lost");
+  totalLost = json.getString("lost");
   println(totalLost);
+}
+
+void ledPrint(String num) {
+ String converted = "";
+  String numPrint1 = "";
+  String numPrint2 = "";
+  String numPrint3 = "";
+  String numPrint4 = "";
+  String numPrint5 = "";
+  String numPrint6 = "";
+  String numPrint7 = "";
+  String numPrint8 = "";
+  String numPrint9 = "";
+  String numPrint10 = "";
+  String numPrint11= "";
+  String numPrint12 = "";
+  String numPrint13 = "";
+  String numPrint14 = "";
+  String numPrint15 = "";
+  String numPrint16= "";
+  String c = num; 
+  //println("input: " + c);
+  int n = c.length();
+  //println("length: " + n);
+  char [] bit = new char[16];
+  char[] n1 = new char[1];
+  char[] n2 = new char[2];
+  char[] n3 = new char[3];
+  char[] n4 = new char[4];
+  char[] n5 = new char[5];
+  char[] n6 = new char[6];
+  char[] n7 = new char[7];
+  char[] n8 = new char[8];
+  char[] n9 = new char[9];
+  char[] n10 = new char[10];
+  char[] n11= new char[11];
+  char[] n12 = new char[12];
+  char[] n13 = new char[13];
+  char[] n14 = new char[14];
+  char[] n15= new char[15];
+  char[] n16 = new char[16];
+
+
+  for (int i=0; i<n; i++) {
+    bit[i] = c.charAt(i);
+  }
+
+  for (int i=(n-1); i>-1; i--) {
+    converted += bit[i];
+  }
+  for (int o=0; o<(16-n); o++) {
+    converted += 0;
+  }
+
+  for (int p =0; p<1; p++) {
+    n1[p]=converted.charAt(p);
+    numPrint1 +=n1[p];
+  }
+
+  for (int p =1; p<2; p++) {
+    n2[p]=converted.charAt(p);
+    numPrint2 +=n2[p];
+  }
+
+  for (int p =2; p<3; p++) {
+    n3[p]=converted.charAt(p);
+    numPrint3 +=n3[p];
+  }
+  for (int p =3; p<4; p++) {
+    n4[p]=converted.charAt(p);
+    numPrint4 +=n4[p];
+  }
+
+  for (int p =4; p<5; p++) {
+    n5[p]=converted.charAt(p);
+    numPrint5 +=n5[p];
+  }
+
+  for (int p =5; p<6; p++) {
+    n6[p]=converted.charAt(p);
+    numPrint6 +=n6[p];
+  }
+  for (int p =6; p<7; p++) {
+    n7[p]=converted.charAt(p);
+    numPrint7 +=n7[p];
+  }
+
+  for (int p =7; p<8; p++) {
+    n8[p]=converted.charAt(p);
+    numPrint8 +=n8[p];
+  }
+
+  for (int p =8; p<9; p++) {
+    n9[p]=converted.charAt(p);
+    numPrint9 +=n9[p];
+  }
+  for (int p =9; p<10; p++) {
+    n10[p]=converted.charAt(p);
+    numPrint10 +=n10[p];
+  }
+
+  for (int p =10; p<11; p++) {
+    n11[p]=converted.charAt(p);
+    numPrint11 +=n11[p];
+  }
+
+  for (int p =11; p<12; p++) {
+    n12[p]=converted.charAt(p);
+    numPrint12 +=n12[p];
+  }
+  for (int p =12; p<13; p++) {
+    n13[p]=converted.charAt(p);
+    numPrint13 +=n13[p];
+  }
+  for (int p =13; p<14; p++) {
+    n14[p]=converted.charAt(p);
+    numPrint14 +=n14[p];
+  }
+
+  for (int p =14; p<15; p++) {
+    n15[p]=converted.charAt(p);
+    numPrint15 +=n15[p];
+  }
+
+  for (int p =15; p<16; p++) {
+    n16[p]=converted.charAt(p);
+    numPrint16 +=n16[p];
+  }
+  //println(converted);
+  myPort.write(int(numPrint1));
+  delay(5);
+  myPort.write(int(numPrint2));
+  delay(5);
+  myPort.write(int(numPrint3));
+  delay(5);
+  myPort.write(int(numPrint4));
+  delay(5);
+  myPort.write(int(numPrint5));
+  delay(5);
+  myPort.write(int(numPrint6));
+  delay(5);
+  myPort.write(int(numPrint7));
+  delay(5);
+  myPort.write(int(numPrint8));
+  delay(5);
+  myPort.write(int(numPrint9));
+  delay(5);
+  myPort.write(int(numPrint10));
+  delay(5);
+  myPort.write(int(numPrint11));
+  delay(5);
+  myPort.write(int(numPrint12));
+  delay(5);
+  myPort.write(int(numPrint13));
+  delay(5);
+  myPort.write(int(numPrint14));
+  delay(5);
+  myPort.write(int(numPrint15));
+  delay(5);
+  myPort.write(int(numPrint16));
+  delay(5);
 }

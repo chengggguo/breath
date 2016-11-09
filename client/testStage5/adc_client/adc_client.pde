@@ -87,7 +87,7 @@ void setup() {
   myPort = new Serial(this, portName, 9600);
 
   json = loadJSONObject("new.json");
-  //totalLost = json.getString("lost");
+  totalLost = json.getString("lost");
 }
 
 //////////////////////////////////////////// main loop
@@ -271,8 +271,8 @@ void pixelUpdate() {        //red/blue dataVis
     if (initPackets != 0) {
       println("xxx");
 
-      for (int i=200; i < initPackets; i++) {  ////////////////// i=0
-        pos = (i-200)*step;      
+      for (int i=0; i < initPackets; i++) {  ////////////////// i=0
+        pos = i*step;      
         if (inPackets[i] == false) {
           for (int n = 0; n < step; n++) {          
             color blue = color(46, 49, 146);
@@ -291,10 +291,15 @@ void pixelUpdate() {        //red/blue dataVis
       println("updated");
       println("lost: " + lostPackets);
       println("all: " +initPackets);
-      temLost = lostPackets + totalLost;
+      
+      long n = Integer.parseInt(totalLost)+lostPackets;
+      println(totalLost);
+      println(n);
+      temLost = Long.toString(n);
+      //println("longstring" + temLost);
       ledPrint(temLost);
 
-      println(temLost);
+      //println(temLost);
 
       lostPackets = 0;
       delay(3000);

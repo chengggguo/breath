@@ -50,6 +50,10 @@ int pos;    // starting postion(pixel) of red/blue lines
 /////~
 int sent = 0;
 int receive = 0;
+int valState=4;
+int breathState=23;
+int ledOn =13;
+int ledOff=26;
 
 void setup() {
   /////MCP3008 adc
@@ -79,8 +83,10 @@ void setup() {
   /////~
 
 
-  GPIO.pinMode(12, GPIO.OUTPUT);              //GPIO -valve inhale
-  GPIO.pinMode(16, GPIO.OUTPUT);              // GPIO -valve state(exhale/inhale)
+  GPIO.pinMode(valState, GPIO.OUTPUT);              //GPIO -valve inhale
+  GPIO.pinMode(breathState, GPIO.OUTPUT);              // GPIO -valve state(exhale/inhale)
+  GPIO.pinMode(ledOn,GPIO.OUTPUT);
+  GPIO.pinMode(ledOff,GPIO.OUTPUT);
   //frameRate(10);
 
   String portName = Serial.list()[0];
@@ -104,15 +110,15 @@ void draw() {
       runState = false;
       blowing = true;
       blowStart = millis();
-      GPIO.digitalWrite(16, GPIO.HIGH);        //exhale
+      GPIO.digitalWrite(breathState, GPIO.HIGH);        //exhale
     } else if (sensorData < 69) {
       println(sensorData);
       state = "inhale";
       runState = false;
-      GPIO.digitalWrite(16, GPIO.LOW);      //inhale
+      GPIO.digitalWrite(breathState, GPIO.LOW);      //inhale
     } else {
       state = "standby";
-      GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
+      GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
       packetsSent = false;
     }
     println(state);
@@ -140,7 +146,7 @@ void draw() {
         println("b: " + sensorData);
         interval = blowEnd - blowStart;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/1000) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/200) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
         //delay(1000);
@@ -152,7 +158,7 @@ void draw() {
         sendPackets();
         state = "standby";
         runState = true;
-        GPIO.digitalWrite(16, GPIO.LOW);      //stand by -GPIO 12 LOW
+        GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
       }
     } else {
       if (!packetsSent) {
@@ -314,11 +320,15 @@ void valSwitch() {
   //println(inPackets.length);
   for (int i = 0; i < initPackets; i++) {
     if (inPackets[i] == true) {
-      GPIO.digitalWrite(12, GPIO.HIGH);
+      GPIO.digitalWrite(valState, GPIO.HIGH);
+      GPIO.digitalWrite(ledOn, GPIO.HIGH);
       delay(50);
+      GPIO.digitalWrite(ledOn, GPIO.LOW);
     } else {
-      GPIO.digitalWrite(12, GPIO.LOW);
+      GPIO.digitalWrite(valState, GPIO.LOW);
+      GPIO.digitalWrite(ledOff, GPIO.HIGH);
       delay(50);
+      GPIO.digitalWrite(ledOff, GPIO.LOW);
     }
   }
   println("done");

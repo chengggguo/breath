@@ -22,6 +22,7 @@ int sensorData = 0;
 String state = null;
 boolean runState=true;
 boolean blowing = false;
+boolean initInhale = false;
 long blowStart;
 long blowEnd;
 long interval = 0;
@@ -61,6 +62,8 @@ void setup() {
   adc = new MCP3008(SPI.list()[0]); 
   adc.settings(100000, SPI.MSBFIRST, SPI.MODE0); // 1MHz should be OK...
   /////~
+
+
 
   ///// -red/blue dataVis
   size(800, 600);
@@ -103,7 +106,7 @@ void draw() {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
     //println(sensorData);
-    if (sensorData > 80) {
+    if (sensorData > 81) {
       state = "blow";
       //delay(400);
       maxSpeed = sensorData;
@@ -114,10 +117,10 @@ void draw() {
         blowStart = millis();
       }
       GPIO.digitalWrite(breathState, GPIO.HIGH);        //exhale
-    } else if (sensorData < 72) {
+    } else if (sensorData < 71) {
       println(sensorData);
       state = "inhale";
-      if(init){
+      if (init) {
         blowStart = millis();
       }
       runState = false;
@@ -181,46 +184,54 @@ void draw() {
   }
 
   if (state == "inhale") {                      //drive valves
-    if (init) {
-      rawData = adc.getAnalog(0);
-      sensorData = int(rawData * 100);
-      for (int i = 0; i<5; i++) {
-        if (minSpeed > sensorData) {
-          minSpeed = sensorData;
-        }
-      }
-      println("key2: " + sensorData);
-      blowEnd = millis();
-      println("timeStart: " + blowStart);
-      println("timeEnd: " + blowEnd);
-      if (sensorData > maxSpeed) {
-        minSpeed = sensorData;
-      }
-      println(sensorData + "/" + maxSpeed);
-      if (sensorData > 72 ) {
-        println("b: " + sensorData);
-        interval = blowEnd - blowStart;
-        maxSpeed = 150 - minSpeed;
-        println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/200) + 1;
-        println("packets" + initPackets);
-        println("time: " + interval);
-        //delay(1000);
-        //initPackets=1000; /////////////////////////////////////
-        inPackets = new boolean[initPackets];
-        for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
-          inPackets[i] = true;
-        }
-        sendPackets();
-        state = "standby";
-        runState = true;
-        GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
-      }
-    } else {
+    if(!initInhale){
       valSwitch();
       runState = true;
       state = "standby";
     }
+    //if (init) {
+    //  rawData = adc.getAnalog(0);
+    //  sensorData = int(rawData * 100);
+    //  for (int i = 0; i<5; i++) {
+    //    if (minSpeed < sensorData) {
+    //      minSpeed = sensorData;
+    //    }
+    //  }
+    //  println("key2: " + sensorData);
+    //  blowEnd = millis();
+    //  println("timeStart: " + blowStart);
+    //  println("timeEnd: " + blowEnd);
+    //  if (sensorData > minSpeed) {
+    //    minSpeed = sensorData;
+    //  }
+    //  println(sensorData + "/" + maxSpeed);
+    //  if (sensorData > 72 ) {
+    //    println("b: " + sensorData);
+    //    interval = blowEnd - blowStart;
+    //    maxSpeed = 150 - minSpeed;
+    //    println(interval * maxSpeed * sensorCSA);
+    //    initPackets = int((interval * maxSpeed * sensorCSA)/200) + 1;
+    //    println("packets" + initPackets);
+    //    println("time: " + interval);
+    //    //delay(1000);
+    //    //initPackets=1000; /////////////////////////////////////
+    //    inPackets = new boolean[initPackets];
+    //    for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
+    //      inPackets[i] = true;
+    //    }
+    //    initInhale = true; /// if start with inhaling
+    //    sendPackets();
+    //    state = "standby";
+    //    runState = true;
+    //    GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
+    //  }
+    //  initInhale = true;
+    //}
+    //else {
+    //  valSwitch();
+    //  runState = true;
+    //  state = "standby";
+    //}
   }
   if (state == "standby") {                    //do nothing
     println(sensorData);
@@ -266,7 +277,7 @@ int returnADC(int ch) {
   int result = ((highInt & 3) << 8) + lowInt; // adds lowest 2 bits of 2nd byte to 3rd byte to get 10 bit result 
   return result;
 }
-///////////////
+/////////////// 
 
 void timer() {           // timeout for udp communication
   ellapsedTime = millis() - startTime;
@@ -280,7 +291,19 @@ void timer() {           // timeout for udp communication
 
 void sendPackets() {
   startTime = millis();
-  //udp.listen(true);
+  //if (!initInhale) {
+  //  //udp.listen(true);
+  //  for (int i = 0; i <  initPackets; i++) { 
+  //    if (inPackets[i] == true) {
+  //      inPackets[i] = false;
+  //      String message = str(i);
+  //      message = message + ":\n";
+  //      udp.send(message, ip, port);
+  //      sent=sent+1;
+  //    }
+  //  }
+  //}
+  //initInhale = false;
   for (int i = 0; i <  initPackets; i++) { 
     if (inPackets[i] == true) {
       inPackets[i] = false;
@@ -290,6 +313,7 @@ void sendPackets() {
       sent=sent+1;
     }
   }
+  initInhale = false;
   println("sent: " +sent);
   sent = 0;
   allSent = true;

@@ -26,6 +26,7 @@ long blowStart;
 long blowEnd;
 long interval = 0;
 int maxSpeed = 0;
+int minSpeed = 0;
 int initPackets=0;
 int lostPackets = 0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
@@ -85,8 +86,8 @@ void setup() {
 
   GPIO.pinMode(valState, GPIO.OUTPUT);              //GPIO -valve inhale
   GPIO.pinMode(breathState, GPIO.OUTPUT);              // GPIO -valve state(exhale/inhale)
-  GPIO.pinMode(ledOn,GPIO.OUTPUT);
-  GPIO.pinMode(ledOff,GPIO.OUTPUT);
+  GPIO.pinMode(ledOn, GPIO.OUTPUT);
+  GPIO.pinMode(ledOff, GPIO.OUTPUT);
   //frameRate(10);
 
   String portName = Serial.list()[0];
@@ -109,11 +110,16 @@ void draw() {
       println("key1: " + maxSpeed);
       runState = false;
       blowing = true;
-      blowStart = millis();
+      if (init) {
+        blowStart = millis();
+      }
       GPIO.digitalWrite(breathState, GPIO.HIGH);        //exhale
-    } else if (sensorData < 69) {
+    } else if (sensorData < 72) {
       println(sensorData);
       state = "inhale";
+      if(init){
+        blowStart = millis();
+      }
       runState = false;
       GPIO.digitalWrite(breathState, GPIO.LOW);      //inhale
     } else {
@@ -142,7 +148,7 @@ void draw() {
         maxSpeed = sensorData;
       }
       println(sensorData + "/" + maxSpeed);
-      if (sensorData < 74) {
+      if (sensorData < 80) {
         println("b: " + sensorData);
         interval = blowEnd - blowStart;
         println(interval * maxSpeed * sensorCSA);
@@ -175,9 +181,46 @@ void draw() {
   }
 
   if (state == "inhale") {                      //drive valves
-    valSwitch();
-    runState = true;
-    state = "standby";
+    if (init) {
+      rawData = adc.getAnalog(0);
+      sensorData = int(rawData * 100);
+      for (int i = 0; i<5; i++) {
+        if (minSpeed > sensorData) {
+          minSpeed = sensorData;
+        }
+      }
+      println("key2: " + sensorData);
+      blowEnd = millis();
+      println("timeStart: " + blowStart);
+      println("timeEnd: " + blowEnd);
+      if (sensorData > maxSpeed) {
+        minSpeed = sensorData;
+      }
+      println(sensorData + "/" + maxSpeed);
+      if (sensorData > 72 ) {
+        println("b: " + sensorData);
+        interval = blowEnd - blowStart;
+        maxSpeed = 150 - minSpeed;
+        println(interval * maxSpeed * sensorCSA);
+        initPackets = int((interval * maxSpeed * sensorCSA)/200) + 1;
+        println("packets" + initPackets);
+        println("time: " + interval);
+        //delay(1000);
+        //initPackets=1000; /////////////////////////////////////
+        inPackets = new boolean[initPackets];
+        for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
+          inPackets[i] = true;
+        }
+        sendPackets();
+        state = "standby";
+        runState = true;
+        GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
+      }
+    } else {
+      valSwitch();
+      runState = true;
+      state = "standby";
+    }
   }
   if (state == "standby") {                    //do nothing
     println(sensorData);
@@ -297,7 +340,7 @@ void pixelUpdate() {        //red/blue dataVis
       println("updated");
       println("lost: " + lostPackets);
       println("all: " +initPackets);
-      
+
       long n = Integer.parseInt(totalLost)+lostPackets;
       println(totalLost);
       println(n);
@@ -350,7 +393,7 @@ void keyPressed() {
 }
 
 void ledPrint(String num) {
- String converted = "";
+  String converted = "";
   String numPrint1 = "";
   String numPrint2 = "";
   String numPrint3 = "";

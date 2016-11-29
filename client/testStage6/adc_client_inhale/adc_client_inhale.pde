@@ -33,6 +33,8 @@ int initPackets=0;
 int lostPackets = 0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
 boolean init;
+boolean initNum = false;
+int lostPacketsTem = 0;
 /////~
 
 /////udp and draw() setup
@@ -75,6 +77,7 @@ void setup() {
   h = height;
   init = true;
   /////~
+  initNum = true;
 
   /////udp
   ip = "localhost"; 
@@ -97,14 +100,11 @@ void setup() {
 
   String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 9600);
-
-  json = loadJSONObject("new.json");
-  totalLost = json.getString("lost");
-  ledPrint(totalLost);
 }
 
 //////////////////////////////////////////// main loop
 void draw() {
+
   if (runState) {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
@@ -134,6 +134,15 @@ void draw() {
       GPIO.digitalWrite(breathState, GPIO.LOW); //stand by -GPIO 12 LOW
     }
     println(state);
+  }
+  if (initNum) {
+    json = loadJSONObject("new.json");
+    totalLost = json.getString("lost");
+    for (int i = 0; i<50; i++) {
+      ledPrint(totalLost);
+      delay(10);
+    }
+    initNum = false;
   }
 
 
@@ -273,19 +282,6 @@ void timer() {           // timeout for udp communication
 
 void sendPackets() {
   startTime = millis();
-  //if (!initInhale) {
-  //  //udp.listen(true);
-  //  for (int i = 0; i <  initPackets; i++) { 
-  //    if (inPackets[i] == true) {
-  //      inPackets[i] = false;
-  //      String message = str(i);
-  //      message = message + ":\n";
-  //      udp.send(message, ip, port);
-  //      sent=sent+1;
-  //    }
-  //  }
-  //}
-  //initInhale = false;
   for (int i = 0; i <  initPackets; i++) { 
     if (inPackets[i] == true) {
       inPackets[i] = false;
@@ -370,13 +366,17 @@ void valSwitch() {
     if (inPackets[i] == false) {
       GPIO.digitalWrite(valState, GPIO.LOW);
       lostPackets= lostPackets+1;
-      long n = Integer.parseInt(totalLost)+lostPackets;
-      println(totalLost);
-      println(n);
-      temLost = Long.toString(n);
-      //println("longstring" + temLost);
-      ledPrint(temLost);
-      delay(100);
+      if (lostPackets > lostPacketsTem) {
+        lostPacketsTem = lostPackets;
+        long n = Integer.parseInt(totalLost)+lostPackets;
+        println(totalLost);
+        println(n);
+        temLost = Long.toString(n);
+        ledPrint(temLost);
+        delay(100);
+      }else{
+        delay(100);
+      }
     } else {
       GPIO.digitalWrite(valState, GPIO.HIGH);
       GPIO.digitalWrite(ledOn, GPIO.HIGH);
@@ -394,6 +394,8 @@ void keyPressed() {
   background(237, 28, 36);
   loadPixels();
   init = true;
+  initNum = true;
+  lostPacketsTem = 0;
   json.setString("lost", temLost);
   //json = new JSONObject();
   saveJSONObject(json, "data/new.json");
@@ -561,5 +563,4 @@ void ledPrint(String num) {
   myPort.write(int(numPrint15));
 
   myPort.write(int(numPrint16));
-
 }

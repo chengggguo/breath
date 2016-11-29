@@ -7,7 +7,7 @@ import processing.serial.*;
 Serial myPort;            //Serial communication for sending number to arduino
 
 JSONObject json;          //create a json object to store the total number of lost Packets
-String temLost;
+String temLost = "0";
 String totalLost;
 String converted = "";
 int first;
@@ -34,7 +34,8 @@ int lostPackets = 0;
 float sensorCSA = 0.785; // the cross-sectional area of air pressure sensor
 boolean init;
 boolean initNum = false;
-int lostPacketsTem = 0;
+boolean reset = false;
+boolean restart = false;
 /////~
 
 /////udp and draw() setup
@@ -42,6 +43,7 @@ UDP udp;
 String ip;
 int port;
 boolean [] inPackets;
+boolean [] temPackets;
 int w;                      // image size
 int h;
 boolean allSent;
@@ -50,6 +52,9 @@ int startTime;
 int timeout;
 int ellapsedTime;
 int step;
+int resetT;
+int resetS;
+int resetTimeout;
 int pos;    // starting postion(pixel) of red/blue lines
 
 /////~
@@ -78,6 +83,7 @@ void setup() {
   init = true;
   /////~
   initNum = true;
+  resetTimeout = 20000;
 
   /////udp
   ip = "localhost"; 
@@ -104,7 +110,11 @@ void setup() {
 
 //////////////////////////////////////////// main loop
 void draw() {
+  if (reset) {
+    resetTimer();
+  }
 
+  //resetTimer();
   if (runState) {
     rawData = adc.getAnalog(0);
     sensorData = int(rawData * 100);
@@ -120,7 +130,7 @@ void draw() {
         blowStart = millis();
       }
       GPIO.digitalWrite(breathState, GPIO.HIGH);
-    } else if (sensorData < 69) {
+    } else if (sensorData < 65) {
       println(sensorData);
       state = "inhale";
       if (init) {
@@ -147,6 +157,7 @@ void draw() {
 
 
   if (state == "blow") {                        // get the lung capacity and send packets
+    reset = false;
     if (initInhale) {
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
@@ -165,9 +176,12 @@ void draw() {
         GPIO.digitalWrite(stateLed, GPIO.LOW);
       }
     }
+    reset = true;
+    resetS = millis();
   }
 
   if (state == "inhale") {                      //drive valves
+    reset = false;
     if (init) {
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
@@ -195,8 +209,10 @@ void draw() {
         //delay(1000);
         //initPackets=1000; /////////////////////////////////////
         inPackets = new boolean[initPackets];
+        temPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
           inPackets[i] = true;
+          temPackets[i] = true;
         }
 
         sendPackets();
@@ -223,6 +239,8 @@ void draw() {
         }
       }
     }
+    reset = true;
+    resetS = millis();
   }
   if (state == "standby") {                    //do nothing
     println(sensorData);
@@ -235,6 +253,23 @@ void draw() {
       init =false;
     }
     pixelUpdate();
+  }
+  if (restart) {
+    background(237, 28, 36);
+    loadPixels();
+    init = true;
+    initNum = true;
+    lostPackets = 0;
+    if (temLost == "0" ) {
+      temLost = totalLost;
+    }
+    json.setString("lost", temLost);
+    saveJSONObject(json, "data/new.json");
+    delay(50);
+    json = loadJSONObject("new.json");
+    totalLost = json.getString("lost");
+    println(totalLost);
+    restart = false;
   }
 }
 
@@ -277,6 +312,14 @@ void timer() {           // timeout for udp communication
 
     println("receive: " + receive);
     receive = 0;
+  }
+}
+
+void resetTimer() {
+  resetT = millis() - resetS;
+  if (resetT > resetTimeout) {
+    restart = true;
+    reset = false;
   }
 }
 
@@ -328,7 +371,7 @@ void pixelUpdate() {        //red/blue dataVis
             color blue = color(46, 49, 146);
             pixels[n + pos] = blue;
           }
-          lostPackets= lostPackets+1;
+          //lostPackets= lostPackets+1;
         } else {
           for (int n = 0; n < step; n++) {          
             color red = color(237, 28, 36);
@@ -339,20 +382,7 @@ void pixelUpdate() {        //red/blue dataVis
       //print(inPackets);
       updatePixels();
       println("updated");
-      println("lost: " + lostPackets);
-      println("all: " +initPackets);
-
-      long n = Integer.parseInt(totalLost)+lostPackets;
-      println(totalLost);
-      println(n);
-      temLost = Long.toString(n);
-      //println("longstring" + temLost);
-      //ledPrint(temLost);
-
-      //println(temLost);
-
-      lostPackets = 0;
-      delay(3000);
+      //delay(3000);
     }
     allSent = false;
     allDataArrived = false;
@@ -361,33 +391,34 @@ void pixelUpdate() {        //red/blue dataVis
 
 
 void valSwitch() {
-  //println(inPackets.length);
   for (int i = 0; i < initPackets; i++) {
     if (inPackets[i] == false) {
       GPIO.digitalWrite(valState, GPIO.LOW);
-      lostPackets= lostPackets+1;
-      if (lostPackets > lostPacketsTem) {
-        lostPacketsTem = lostPackets;
+      if (temPackets[i] != inPackets[i]) {
+        lostPackets= lostPackets+1;
         long n = Integer.parseInt(totalLost)+lostPackets;
         println(totalLost);
         println(n);
         temLost = Long.toString(n);
         ledPrint(temLost);
         delay(100);
-      }else{
-        delay(100);
+        temPackets[i] = inPackets[i];
+        resetS=millis();
       }
     } else {
       GPIO.digitalWrite(valState, GPIO.HIGH);
       GPIO.digitalWrite(ledOn, GPIO.HIGH);
       delay(100);
       GPIO.digitalWrite(ledOn, GPIO.LOW);
+      resetS=millis();
     }
   }
+  println("lost: " + lostPackets);
+  println("all: " +initPackets);
   println("done");
   state = "standby";
   allDataArrived = false;
-  lostPackets = 0;
+  //lostPackets = 0;
 }
 
 void keyPressed() {
@@ -395,7 +426,7 @@ void keyPressed() {
   loadPixels();
   init = true;
   initNum = true;
-  lostPacketsTem = 0;
+  lostPackets = 0;
   json.setString("lost", temLost);
   //json = new JSONObject();
   saveJSONObject(json, "data/new.json");

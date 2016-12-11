@@ -66,7 +66,7 @@ int ledOn =13;
 int stateLed=26;
 
 ////valve switch - to make the valve trigered every unit(int) packets
-int unit = 101;  // triger the valve accrduing to the average boolean of every unit(int) packets -needs to be singular
+int unit = 201;  // triger the valve accrduing to the average boolean of every unit(int) packets -needs to be singular
 int valPos; // position of the "i" of each unit 
 int booleanCount; // counting the amount of boolean in each unit
 
@@ -171,7 +171,7 @@ void draw() {
     if (initInhale) {
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
-      if (sensorData <65) {
+      if (sensorData <79) {
         state = "standby";
         runState = true;
         initInhale = false;
@@ -180,7 +180,7 @@ void draw() {
     } else {
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
-      if (sensorData <65) {
+      if (sensorData <79) {
         state = "standby";
         runState = true;
         GPIO.digitalWrite(stateLed, GPIO.LOW);
@@ -215,11 +215,10 @@ void draw() {
         interval = blowEnd - blowStart;
         maxSpeed = 150 - minSpeed;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/300) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
-        //delay(1000);
-        //initPackets=1000; /////////////////////////////////////
+        delay(1000);
         inPackets = new boolean[initPackets];
         temPackets = new boolean[initPackets];
         for (int i = 0; i < initPackets; i++) {  // assign red to the background as defalut
@@ -418,7 +417,7 @@ void valSwitch() {
         println(n);
         temLost = Long.toString(n);
         ledPrint(temLost);
-        delay(10); ////////delete later
+        //delay(10); ////////delete later
         temPackets[i] = inPackets[i];
         resetS=millis();
       }
@@ -439,8 +438,8 @@ void valSwitch() {
       }
       valPos = 0;
       booleanCount = 0;
-      println("oneround Done");
-      delay(10); ///////delete later
+      //println("oneround Done");
+      //delay(10); ///////delete later
     }
     
     valPos++;

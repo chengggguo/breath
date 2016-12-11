@@ -65,8 +65,8 @@ int breathState=23;
 int ledOn =13;
 int stateLed=26;
 
-////valve switch - to make the valve trigered every 11 packets
-int unit = 101;  // triger the valve accrduing to the average boolean of every 11 packets -needs to be singular
+////valve switch - to make the valve trigered every unit(int) packets
+int unit = 101;  // triger the valve accrduing to the average boolean of every unit(int) packets -needs to be singular
 int valPos; // position of the "i" of each unit 
 int booleanCount; // counting the amount of boolean in each unit
 
@@ -137,7 +137,7 @@ void draw() {
         blowStart = millis();
       }
       GPIO.digitalWrite(breathState, GPIO.LOW);
-      GPIO.digitalWrite(valState, GPIO.HIGH);
+      GPIO.digitalWrite(valState, GPIO.LOW);
     } else if (sensorData < 67) {
       println(sensorData);
       state = "inhale";
@@ -193,8 +193,8 @@ void draw() {
   if (state == "inhale") {                      //drive valves
     reset = false;
     if (init) {
-      GPIO.digitalWrite(breathState, GPIO.LOW);
-      GPIO.digitalWrite(valState, GPIO.LOW);
+      GPIO.digitalWrite(breathState, GPIO.HIGH);
+      GPIO.digitalWrite(valState, GPIO.HIGH);
       rawData = adc.getAnalog(0);
       sensorData = int(rawData * 100);
       for (int i = 0; i<5; i++) {
@@ -237,16 +237,16 @@ void draw() {
       }
     } else {
       if (!initInhale) {
-        GPIO.digitalWrite(breathState, GPIO.LOW);
-        GPIO.digitalWrite(valState, GPIO.LOW);
+        GPIO.digitalWrite(breathState, GPIO.HIGH);
+        GPIO.digitalWrite(valState, GPIO.HIGH);
         valSwitch();
         runState = true;
         state = "standby";
         GPIO.digitalWrite(stateLed, GPIO.HIGH);
         sendPackets();
       } else {
-        GPIO.digitalWrite(breathState, GPIO.LOW);
-        GPIO.digitalWrite(valState, GPIO.LOW);
+        GPIO.digitalWrite(breathState, GPIO.HIGH);
+        GPIO.digitalWrite(valState, GPIO.HIGH);
         rawData = adc.getAnalog(0);
         sensorData = int(rawData * 100);
         if (sensorData >68) {
@@ -373,8 +373,6 @@ void receive(byte[] data, String ip, int port) {
 
 
 void pixelUpdate() {        //red/blue dataVis
-  //println("draw");
-  //delay(1000);
   timer();
 
   if (allDataArrived == true) {
@@ -431,10 +429,10 @@ void valSwitch() {
 
     if (valPos>(unit-1)) {
       if (booleanCount > (unit/2)) {
-        GPIO.digitalWrite(breathState, GPIO.HIGH);
+        GPIO.digitalWrite(breathState, GPIO.LOW);
         delay(100);
       } else {
-        GPIO.digitalWrite(breathState, GPIO.LOW);
+        GPIO.digitalWrite(breathState, GPIO.HIGH);
         GPIO.digitalWrite(ledOn, GPIO.HIGH);
         delay(100);
         GPIO.digitalWrite(ledOn, GPIO.LOW);
@@ -446,35 +444,12 @@ void valSwitch() {
     }
     
     valPos++;
-    //if (inPackets[i] == false) {
-    //  GPIO.digitalWrite(breathState, GPIO.HIGH);
-    //  if (temPackets[i] != inPackets[i]) {
-    //    lostPackets= lostPackets+1;
-    //    long n = Integer.parseInt(totalLost)+lostPackets;
-    //    println(totalLost);
-    //    println(n);
-    //    temLost = Long.toString(n);
-    //    ledPrint(temLost);
-    //    delay(100);
-    //    temPackets[i] = inPackets[i];
-    //    resetS=millis();
-    //  }
-    //  booleanCount ++;
-
-    //} else {
-    //  GPIO.digitalWrite(breathState, GPIO.LOW);
-    //  GPIO.digitalWrite(ledOn, GPIO.HIGH);
-    //  delay(100);
-    //  GPIO.digitalWrite(ledOn, GPIO.LOW);
-    //  resetS=millis();
-    //}
   }
   println("lost: " + lostPackets);
   println("all: " +initPackets);
   println("done");
   state = "standby";
   allDataArrived = false;
-  //lostPackets = 0;
 }
 
 void keyPressed() {

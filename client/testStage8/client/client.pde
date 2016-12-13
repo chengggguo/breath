@@ -66,7 +66,7 @@ int ledOn =13;
 int stateLed=26;
 
 ////valve switch - to make the valve trigered every unit(int) packets
-int unit = 5;  // triger the valve accrduing to the average boolean of every unit(int) packets -needs to be singular
+int unit = 3;  // triger the valve accrduing to the average boolean of every unit(int) packets -needs to be singular
 int valPos; // position of the "i" of each unit 
 int booleanCount; // counting the amount of boolean in each unit
 
@@ -216,7 +216,7 @@ void draw() {
         interval = blowEnd - blowStart;
         maxSpeed = 150 - minSpeed;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/2000) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 100;
         println("packets" + initPackets);
         println("time: " + interval);
         delay(1000);
@@ -266,7 +266,7 @@ void draw() {
 
   if (allSent == true) {                      //update pixels
     if (init) {
-      step = w*h/initPackets;
+      step = w*h/(initPackets-99);
       init =false;
     }
     pixelUpdate();
@@ -345,13 +345,16 @@ void resetTimer() {
 
 void sendPackets() {
   startTime = millis();
+  for (int n=0; n<100; n++) {
+    udp.send(" ;\n", ip, port);
+  }
   for (int i = 0; i <  initPackets; i++) { 
     if (inPackets[i] == true) {
       inPackets[i] = false;
       String message = str(i);
       message = message + ";\n";
-      udp.send(message,ip,port);
-      delay(1); 
+      udp.send(message, ip, port);
+      delay(2); 
       sent=sent+1;
     }
   }
@@ -385,17 +388,19 @@ void pixelUpdate() {        //red/blue dataVis
       println("xxx");
 
       for (int i=0; i < initPackets; i++) {  ////////////////// i=0
-        pos = i*step;      
-        if (inPackets[i] == false) {
-          for (int n = 0; n < step; n++) {          
-            color blue = color(46, 49, 146);
-            pixels[n + pos] = blue;
-          }
-          //lostPackets= lostPackets+1;
-        } else {
-          for (int n = 0; n < step; n++) {          
-            color red = color(237, 28, 36);
-            pixels[n + pos] = red;
+        if (i>99) {
+          pos = (i-99)*step;      
+          if (inPackets[i] == false) {
+            for (int n = 0; n < step; n++) {          
+              color blue = color(46, 49, 146);
+              pixels[n + pos] = blue;
+            }
+            //lostPackets= lostPackets+1;
+          } else {
+            for (int n = 0; n < step; n++) {          
+              color red = color(237, 28, 36);
+              pixels[n + pos] = red;
+            }
           }
         }
       }
@@ -412,41 +417,45 @@ void pixelUpdate() {        //red/blue dataVis
 
 void valSwitch() {
   for (int i = 0; i < initPackets; i++) {
+    if (i>99) {
+      
 
-    if (inPackets[i] == false) {
-      if (temPackets[i] != inPackets[i]) {
-        lostPackets= lostPackets+1;
-        long n = Integer.parseInt(totalLost)+lostPackets;
-        println(totalLost);
-        println(n);
-        temLost = Long.toString(n);
-        ledPrint(temLost);
-        //delay(10); ////////delete later
-        temPackets[i] = inPackets[i];
+
+      if (inPackets[i] == false) {
+        if (temPackets[i] != inPackets[i]) {
+          lostPackets= lostPackets+1;
+          long n = Integer.parseInt(totalLost)+lostPackets;
+          println(totalLost);
+          println(n);
+          temLost = Long.toString(n);
+          ledPrint(temLost);
+          //delay(10); ////////delete later
+          temPackets[i] = inPackets[i];
+          resetS=millis();
+        }
+        booleanCount ++;
+      } else {
         resetS=millis();
       }
-      booleanCount ++;
-    }else{
-      resetS=millis();
-    }
 
-    if (valPos>(unit-1)) {
-      if (booleanCount > (unit/2)) {
-        GPIO.digitalWrite(breathState, GPIO.LOW);
-        delay(100);
-      } else {
-        GPIO.digitalWrite(breathState, GPIO.HIGH);
-        GPIO.digitalWrite(ledOn, GPIO.HIGH);
-        delay(100);
-        GPIO.digitalWrite(ledOn, GPIO.LOW);
+      if (valPos>(unit-1)) {
+        if (booleanCount > (unit/2)) {
+          GPIO.digitalWrite(breathState, GPIO.LOW);
+          delay(100);
+        } else {
+          GPIO.digitalWrite(breathState, GPIO.HIGH);
+          GPIO.digitalWrite(ledOn, GPIO.HIGH);
+          delay(100);
+          GPIO.digitalWrite(ledOn, GPIO.LOW);
+        }
+        valPos = 0;
+        booleanCount = 0;
+        //println("oneround Done");
+        //delay(10); ///////delete later
       }
-      valPos = 0;
-      booleanCount = 0;
-      //println("oneround Done");
-      //delay(10); ///////delete later
+
+      valPos++;
     }
-    
-    valPos++;
   }
   println("lost: " + lostPackets);
   println("all: " +initPackets);

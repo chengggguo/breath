@@ -70,6 +70,11 @@ int unit = 3;  // triger the valve accrduing to the average boolean of every uni
 int valPos; // position of the "i" of each unit 
 int booleanCount; // counting the amount of boolean in each unit
 
+int breathCountStart = 0;
+int breathCountEnd = 0;
+boolean breathCount;  //  inhaling round divided
+boolean roundDone = false;
+
 void setup() {
   /////MCP3008 adc
   adc = new MCP3008(SPI.list()[0]); 
@@ -216,7 +221,7 @@ void draw() {
         interval = blowEnd - blowStart;
         maxSpeed = 150 - minSpeed;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 100;
+        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
         delay(1000);
@@ -239,11 +244,17 @@ void draw() {
       if (!initInhale) {
         GPIO.digitalWrite(breathState, GPIO.HIGH);
         GPIO.digitalWrite(valState, GPIO.HIGH);
+        breathCount = true;
         valSwitch();
         runState = true;
         state = "standby";
         GPIO.digitalWrite(stateLed, GPIO.HIGH);
-        sendPackets();
+        if (roundDone == true) {
+          sendPackets();
+          roundDone = false;
+          println("packets sent");
+          delay(5000);
+        }
       } else {
         GPIO.digitalWrite(breathState, GPIO.HIGH);
         GPIO.digitalWrite(valState, GPIO.HIGH);
@@ -266,7 +277,7 @@ void draw() {
 
   if (allSent == true) {                      //update pixels
     if (init) {
-      step = w*h/(initPackets-99);
+      step = w*h/initPackets;
       init =false;
     }
     pixelUpdate();
@@ -289,6 +300,9 @@ void draw() {
     totalLost = json.getString("lost");
     println(totalLost);
     restart = false;
+    roundDone=false;
+    breathCountStart = 0;
+    breathCountEnd = 0;
     step = 0; //////////
   }
 }
@@ -363,6 +377,7 @@ void sendPackets() {
   sent = 0;
   allSent = true;
   packetsSent = true;
+  roundDone=false;
   println("packets sent");
 }
 
@@ -370,9 +385,12 @@ void receive(byte[] data, String ip, int port) {
   data = subset(data, 0, data.length - 2);
   String info = new String(data);
   int index = int(info);
-  inPackets[index] = true;
-  if (inPackets[index] == true) {
-    receive = receive +1;
+  if (index<99) {
+  } else {
+    inPackets[(index-99)] = true;
+    if (inPackets[index] == true) {
+      receive = receive +1;
+    }
   }
 }
 
@@ -388,19 +406,20 @@ void pixelUpdate() {        //red/blue dataVis
       println("xxx");
 
       for (int i=0; i < initPackets; i++) {  ////////////////// i=0
-        if (i>99) {
-          pos = (i-99)*step;      
-          if (inPackets[i] == false) {
-            for (int n = 0; n < step; n++) {          
-              color blue = color(46, 49, 146);
-              pixels[n + pos] = blue;
-            }
-            //lostPackets= lostPackets+1;
-          } else {
-            for (int n = 0; n < step; n++) {          
-              color red = color(237, 28, 36);
-              pixels[n + pos] = red;
-            }
+        //println(inPackets[i]);
+        //delay(3000);
+
+        pos = i*step;      
+        if (inPackets[i] == false) {
+          for (int n = 0; n < step; n++) {          
+            color blue = color(46, 49, 146);
+            pixels[n + pos] = blue;
+          }
+          //lostPackets= lostPackets+1;
+        } else {
+          for (int n = 0; n < step; n++) {          
+            color red = color(237, 28, 36);
+            pixels[n + pos] = red;
           }
         }
       }
@@ -416,13 +435,11 @@ void pixelUpdate() {        //red/blue dataVis
 
 
 void valSwitch() {
+
   for (int i = 0; i < initPackets; i++) {
-    if (i>99) {
-      
-
-
-      if (inPackets[i] == false) {
-        if (temPackets[i] != inPackets[i]) {
+    if (breathCount) {
+      if (inPackets[breathCountEnd] == false) {
+        if (temPackets[breathCountEnd] != inPackets[breathCountEnd]) {
           lostPackets= lostPackets+1;
           long n = Integer.parseInt(totalLost)+lostPackets;
           println(totalLost);
@@ -430,7 +447,7 @@ void valSwitch() {
           temLost = Long.toString(n);
           ledPrint(temLost);
           //delay(10); ////////delete later
-          temPackets[i] = inPackets[i];
+          temPackets[breathCountEnd] = inPackets[breathCountEnd];
           resetS=millis();
         }
         booleanCount ++;
@@ -450,11 +467,23 @@ void valSwitch() {
         }
         valPos = 0;
         booleanCount = 0;
-        //println("oneround Done");
-        //delay(10); ///////delete later
       }
-
       valPos++;
+      if (breathCountEnd > (initPackets-2)) {
+        breathCount = false;
+        roundDone=true;
+        breathCountStart = 0;
+        breathCountEnd = 0;
+        println("one breath done,ready to send");
+        delay(3000);
+      } else if (breathCountEnd>(100*unit+breathCountStart)) {
+        breathCountStart = breathCountEnd;
+        breathCount = false;
+        println("round Done");
+        delay(2000);
+      } else {
+        breathCountEnd++;
+      }
     }
   }
   println("lost: " + lostPackets);

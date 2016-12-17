@@ -74,6 +74,7 @@ int breathCountStart = 0;
 int breathCountEnd = 0;
 boolean breathCount;  //  inhaling round divided
 boolean roundDone = false;
+boolean inhale;
 
 void setup() {
   /////MCP3008 adc
@@ -98,8 +99,11 @@ void setup() {
   valPos = 0;
   step = 0;
 
+  inhale = true; //should inhale now
+
   /////udp
   ip = "192.168.1.131"; 
+  //ip = "localhost";
   //inPackets = new boolean[initPackets];
   allDataArrived = false;
   allSent = false;
@@ -182,6 +186,7 @@ void draw() {
         runState = true;
         initInhale = false;
         GPIO.digitalWrite(stateLed, GPIO.LOW);
+        inhale = true;
       }
     } else {
       rawData = adc.getAnalog(0);
@@ -190,6 +195,7 @@ void draw() {
         state = "standby";
         runState = true;
         GPIO.digitalWrite(stateLed, GPIO.LOW);
+        inhale = true;
       }
     }
     reset = true;
@@ -221,7 +227,7 @@ void draw() {
         interval = blowEnd - blowStart;
         maxSpeed = 150 - minSpeed;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/100) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/300) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
         delay(1000);
@@ -241,30 +247,40 @@ void draw() {
         GPIO.digitalWrite(breathState, GPIO.LOW);      //stand by -GPIO 12 LOW
       }
     } else {
-      if (!initInhale) {
-        GPIO.digitalWrite(breathState, GPIO.HIGH);
-        GPIO.digitalWrite(valState, GPIO.HIGH);
-        breathCount = true;
-        valSwitch();
-        runState = true;
-        state = "standby";
-        GPIO.digitalWrite(stateLed, GPIO.HIGH);
-        if (roundDone == true) {
-          sendPackets();
-          roundDone = false;
-          println("packets sent");
-          delay(5000);
+      if (inhale) {
+        if (!initInhale) {
+          GPIO.digitalWrite(breathState, GPIO.HIGH);
+          GPIO.digitalWrite(valState, GPIO.HIGH);
+          breathCount = true;
+          valSwitch();
+          runState = true;
+          state = "standby";
+          GPIO.digitalWrite(breathState, GPIO.LOW); 
+          GPIO.digitalWrite(valState, GPIO.LOW);
+          GPIO.digitalWrite(stateLed, GPIO.HIGH);
+          GPIO.digitalWrite(stateLed, GPIO.HIGH);
+          if (roundDone == true) {
+            sendPackets();
+            roundDone = false;
+            println("packets sent");
+            delay(5000);
+          }
+        } else {
+          GPIO.digitalWrite(breathState, GPIO.HIGH);
+          GPIO.digitalWrite(valState, GPIO.HIGH);
+          rawData = adc.getAnalog(0);
+          sensorData = int(rawData * 100);
+          if (sensorData >68) {
+            state = "standby";
+            runState = true;
+            GPIO.digitalWrite(stateLed, GPIO.HIGH);
+            inhale =false;
+          }
         }
       } else {
-        GPIO.digitalWrite(breathState, GPIO.HIGH);
-        GPIO.digitalWrite(valState, GPIO.HIGH);
-        rawData = adc.getAnalog(0);
-        sensorData = int(rawData * 100);
-        if (sensorData >68) {
-          state = "standby";
-          runState = true;
-          GPIO.digitalWrite(stateLed, GPIO.HIGH);
-        }
+        state = "standby";
+        runState =true;
+        GPIO.digitalWrite(stateLed, GPIO.HIGH);
       }
     }
     reset = true;
@@ -304,6 +320,7 @@ void draw() {
     breathCountStart = 0;
     breathCountEnd = 0;
     step = 0; //////////
+    inhale =true;
   }
 }
 
@@ -475,12 +492,14 @@ void valSwitch() {
         breathCountStart = 0;
         breathCountEnd = 0;
         println("one breath done,ready to send");
-        delay(3000);
-      } else if (breathCountEnd>(100*unit+breathCountStart)) {
+        delay(100);/////////////
+        inhale =false;
+      } else if (breathCountEnd>(40*unit+breathCountStart)) {
         breathCountStart = breathCountEnd;
         breathCount = false;
         println("round Done");
-        delay(2000);
+        delay(100); /////////////
+        inhale =false;
       } else {
         breathCountEnd++;
       }

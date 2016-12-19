@@ -1,4 +1,3 @@
-
 import processing.serial.*;
 import processing.io.*;
 import hypermedia.net.*;
@@ -102,7 +101,7 @@ void setup() {
   inhale = true; //should inhale now
 
   /////udp
-  ip = "192.168.1.131"; 
+  ip = "192.168.0.145"; 
   //ip = "localhost";
   //inPackets = new boolean[initPackets];
   allDataArrived = false;
@@ -263,7 +262,7 @@ void draw() {
             sendPackets();
             roundDone = false;
             println("packets sent");
-            delay(5000);
+            //delay(5000);
           }
         } else {
           GPIO.digitalWrite(breathState, GPIO.HIGH);

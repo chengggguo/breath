@@ -227,7 +227,7 @@ void draw() {
         interval = blowEnd - blowStart;
         maxSpeed = 150 - minSpeed;
         println(interval * maxSpeed * sensorCSA);
-        initPackets = int((interval * maxSpeed * sensorCSA)/300) + 1;
+        initPackets = int((interval * maxSpeed * sensorCSA)/800) + 1;
         println("packets" + initPackets);
         println("time: " + interval);
         delay(1000);
@@ -321,6 +321,14 @@ void draw() {
     breathCountEnd = 0;
     step = 0; //////////
     inhale =true;
+    for (int i=0; i<15; i++) {
+      GPIO.digitalWrite(ledOn, GPIO.HIGH);
+      GPIO.digitalWrite(stateLed, GPIO.HIGH);
+      delay(100);
+      GPIO.digitalWrite(ledOn, GPIO.LOW);
+      GPIO.digitalWrite(stateLed, GPIO.LOW);
+      delay(100);
+    }
   }
 }
 
@@ -385,12 +393,14 @@ void sendPackets() {
       String message = str(i);
       message = message + ";\n";
       udp.send(message, ip, port);
-      delay(2); 
+      float r;
+      r = random(1,3);
+      delay(int(r)); 
       sent=sent+1;
     }
   }
   println("sent: " +sent);
-  delay(1000);
+  delay(100);
   sent = 0;
   allSent = true;
   packetsSent = true;
@@ -494,7 +504,7 @@ void valSwitch() {
         println("one breath done,ready to send");
         delay(100);/////////////
         inhale =false;
-      } else if (breathCountEnd>(40*unit+breathCountStart)) {
+      } else if (breathCountEnd>(50*unit+breathCountStart)) {
         breathCountStart = breathCountEnd;
         breathCount = false;
         println("round Done");
